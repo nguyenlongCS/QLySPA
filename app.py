@@ -1,3 +1,4 @@
+# app.py
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timedelta
@@ -393,9 +394,129 @@ def delete_booking(bookingId):
     db.session.commit()
     return jsonify({'success': True, 'message': "Xóa lịch thành công"}), 200
 
+# REPORTS - THỐNG KÊ BÁO CÁO
+@app.route('/api/reports/revenue', methods=['GET'])
+def get_revenue_report():
+    """
+    Báo cáo doanh thu theo tháng
+    Query params: month (MM), year (YYYY)
+    Tính doanh thu = tổng giá dịch vụ của các booking trong tháng
+    """
+    month = request.args.get('month')
+    year = request.args.get('year')
+
+    # Kiểm tra tham số bắt buộc
+    if not month or not year:
+        return jsonify({'success': False, 'message': 'Thiếu tham số month hoặc year'}), 400
+
+    # Chuyển đổi sang số nguyên
+    try:
+        month = int(month)
+        year = int(year)
+    except:
+        return jsonify({'success': False, 'message': 'Tham số month/year không hợp lệ'}), 400
+
+    # Xác định khoảng thời gian của tháng
+    start_date = datetime(year, month, 1)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1)
+    else:
+        end_date = datetime(year, month + 1, 1)
+
+    # Lấy tất cả booking trong tháng
+    bookings = Booking.query.filter(
+        Booking.time >= start_date,
+        Booking.time < end_date
+    ).all()
+
+    # Tính tổng doanh thu từ giá dịch vụ
+    total_revenue = 0
+    booking_count = len(bookings)
+
+    for booking in bookings:
+        service = Service.query.get(booking.servicesId)
+        if service:
+            total_revenue += service.price
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'month': month,
+            'year': year,
+            'total_revenue': total_revenue,
+            'booking_count': booking_count
+        }
+    }), 200
+
+
+@app.route('/api/reports/service-frequency', methods=['GET'])
+def get_service_frequency_report():
+    """
+    Báo cáo tần suất sử dụng dịch vụ theo tháng
+    Query params: month (MM), year (YYYY)
+    Trả về danh sách dịch vụ với số lần được sử dụng trong tháng, sắp xếp giảm dần
+    """
+    month = request.args.get('month')
+    year = request.args.get('year')
+
+    # Kiểm tra tham số bắt buộc
+    if not month or not year:
+        return jsonify({'success': False, 'message': 'Thiếu tham số month hoặc year'}), 400
+
+    # Chuyển đổi sang số nguyên
+    try:
+        month = int(month)
+        year = int(year)
+    except:
+        return jsonify({'success': False, 'message': 'Tham số month/year không hợp lệ'}), 400
+
+    # Xác định khoảng thời gian của tháng
+    start_date = datetime(year, month, 1)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1)
+    else:
+        end_date = datetime(year, month + 1, 1)
+
+    # Lấy tất cả booking trong tháng
+    bookings = Booking.query.filter(
+        Booking.time >= start_date,
+        Booking.time < end_date
+    ).all()
+
+    # Đếm tần suất sử dụng từng dịch vụ
+    service_frequency = {}
+    for booking in bookings:
+        service_id = booking.servicesId
+
+        # Khởi tạo nếu dịch vụ chưa có trong dict
+        if service_id not in service_frequency:
+            service = Service.query.get(service_id)
+            service_frequency[service_id] = {
+                'servicesId': service_id,
+                'name': service.name if service else 'Unknown',
+                'price': service.price if service else 0,
+                'count': 0,
+                'revenue': 0
+            }
+
+        # Tăng số lần sử dụng và tổng doanh thu
+        service_frequency[service_id]['count'] += 1
+        service_frequency[service_id]['revenue'] += service_frequency[service_id]['price']
+
+    # Chuyển dict thành list và sắp xếp theo số lần sử dụng giảm dần
+    result = sorted(service_frequency.values(), key=lambda x: x['count'], reverse=True)
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'month': month,
+            'year': year,
+            'services': result
+        }
+    }), 200
+
 # RUN APP
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True)
-
