@@ -36,6 +36,18 @@ class Employee(db.Model):
     role = db.Column(db.String(50), nullable=False)
     bookings = db.relationship('Booking', backref='employee', lazy=True)
 
+class Invoice(db.Model):
+    __tablename__ = 'invoices'
+    invoiceId = db.Column(db.String(50), primary_key=True)
+    customerId = db.Column(db.String(50), db.ForeignKey('customers.customerId'), nullable=False)
+    total = db.Column(db.Float, nullable=False)
+    vat = db.Column(db.Float, nullable=False)
+    discount = db.Column(db.Float, default=0)
+    finalTotal = db.Column(db.Float, nullable=False)
+    customer = db.relationship('Customer', backref='invoices', lazy=True)
+    booking = db.relationship('Booking', backref='invoice', uselist=False, lazy=True)
+
+
 class Booking(db.Model):
     __tablename__ = 'bookings'
     bookingId = db.Column(db.String(50), primary_key=True)
@@ -44,6 +56,7 @@ class Booking(db.Model):
     customerId = db.Column(db.String(50), db.ForeignKey('customers.customerId'), nullable=False)
     servicesId = db.Column(db.String(50), db.ForeignKey('services.servicesId'), nullable=False)
     employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'), nullable=False)
+    invoiceId = db.Column(db.String(50), db.ForeignKey('invoices.invoiceId'))
 
 # CUSTOMER
 @app.route('/api/customers', methods=['POST'])
@@ -394,6 +407,210 @@ def delete_booking(bookingId):
     db.session.commit()
     return jsonify({'success': True, 'message': "Xóa lịch thành công"}), 200
 
+# INVOICE - YÊU CẦU 3
+@app.route('/api/invoices', methods=['POST'])
+def create_invoice():
+    """
+    Tạo hóa đơn thanh toán cho booking
+    Body: {
+        "invoiceId": "INV001",
+        "bookingId": "B001",
+        "discount": 0 (optional, giảm giá %, tối đa 20)
+    }
+    """
+    data = request.get_json()
+
+    # Kiểm tra booking tồn tại
+    booking = Booking.query.get(data['bookingId'])
+    if not booking:
+        return jsonify({'success': False, 'message': 'Không tìm thấy booking'}), 404
+
+    # Kiểm tra booking đã có hóa đơn chưa
+    if booking.invoiceId:
+        return jsonify({'success': False, 'message': 'Booking đã có hóa đơn'}), 400
+
+    # Kiểm tra mã hóa đơn trùng
+    if Invoice.query.get(data['invoiceId']):
+        return jsonify({'success': False, 'message': 'Mã hóa đơn đã tồn tại'}), 400
+
+    # Lấy thông tin dịch vụ
+    service = Service.query.get(booking.servicesId)
+
+    # Tính toán các giá trị
+    total = service.price  # Giá gốc dịch vụ
+
+    # Giảm giá (nếu có), tối đa 20%
+    discount_percent = float(data.get('discount', 0))
+    if discount_percent < 0 or discount_percent > 20:
+        return jsonify({'success': False, 'message': 'Giảm giá tối đa 20%'}), 400
+
+    discount = total * discount_percent / 100  # Số tiền giảm giá
+
+    # VAT 10% (tính trên giá sau giảm)
+    subtotal = total - discount
+    vat = subtotal * 0.1  # 10% VAT
+
+    # Tổng tiền cuối cùng
+    finalTotal = subtotal + vat
+
+    # Tạo hóa đơn
+    invoice = Invoice(
+        invoiceId=data['invoiceId'],
+        customerId=booking.customerId,
+        total=total,
+        vat=vat,
+        discount=discount,
+        finalTotal=finalTotal
+    )
+
+    # Liên kết hóa đơn với booking
+    booking.invoiceId = data['invoiceId']
+
+    db.session.add(invoice)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Tạo hóa đơn thành công',
+        'data': {
+            'invoiceId': invoice.invoiceId,
+            'customerId': invoice.customerId,
+            'customerName': booking.customer.name,
+            'serviceName': service.name,
+            'total': total,
+            'discount': discount,
+            'vat': vat,
+            'finalTotal': finalTotal
+        }
+    }), 201
+
+
+@app.route('/api/invoices', methods=['GET'])
+def get_invoices():
+    """
+    Lấy danh sách tất cả hóa đơn
+    """
+    invoices = Invoice.query.all()
+    data = []
+
+    for inv in invoices:
+        # Lấy thông tin booking liên quan
+        booking = inv.booking
+
+        data.append({
+            'invoiceId': inv.invoiceId,
+            'customerId': inv.customerId,
+            'customerName': inv.customer.name,
+            'serviceName': booking.service.name if booking else '',
+            'total': inv.total,
+            'discount': inv.discount,
+            'vat': inv.vat,
+            'finalTotal': inv.finalTotal
+        })
+
+    return jsonify({'success': True, 'data': data}), 200
+
+
+@app.route('/api/invoices/<invoiceId>', methods=['GET'])
+def get_invoice(invoiceId):
+    """
+    Xem chi tiết hóa đơn theo mã
+    """
+    invoice = Invoice.query.get(invoiceId)
+    if not invoice:
+        return jsonify({'success': False, 'message': 'Không tìm thấy hóa đơn'}), 404
+
+    # Lấy thông tin booking liên quan
+    booking = invoice.booking
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'invoiceId': invoice.invoiceId,
+            'customerId': invoice.customerId,
+            'customerName': invoice.customer.name,
+            'customerPhone': invoice.customer.phone,
+            'serviceName': booking.service.name if booking else '',
+            'servicePrice': booking.service.price if booking else 0,
+            'employeeName': booking.employee.name if booking else '',
+            'bookingTime': booking.time.isoformat() if booking else '',
+            'total': invoice.total,
+            'discount': invoice.discount,
+            'vat': invoice.vat,
+            'finalTotal': invoice.finalTotal
+        }
+    }), 200
+
+
+@app.route('/api/invoices/<invoiceId>', methods=['PUT'])
+def update_invoice(invoiceId):
+    """
+    Cập nhật hóa đơn (chủ yếu để điều chỉnh giảm giá)
+    Body: {
+        "discount": 10 (giảm giá %, tối đa 20)
+    }
+    """
+    invoice = Invoice.query.get(invoiceId)
+    if not invoice:
+        return jsonify({'success': False, 'message': 'Không tìm thấy hóa đơn'}), 404
+
+    data = request.get_json()
+
+    # Lấy giá gốc từ booking
+    booking = invoice.booking
+    service = Service.query.get(booking.servicesId)
+    total = service.price
+
+    # Tính lại với giảm giá mới
+    discount_percent = float(data.get('discount', 0))
+    if discount_percent < 0 or discount_percent > 20:
+        return jsonify({'success': False, 'message': 'Giảm giá tối đa 20%'}), 400
+
+    discount = total * discount_percent / 100
+    subtotal = total - discount
+    vat = subtotal * 0.1
+    finalTotal = subtotal + vat
+
+    # Cập nhật hóa đơn
+    invoice.total = total
+    invoice.discount = discount
+    invoice.vat = vat
+    invoice.finalTotal = finalTotal
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Cập nhật hóa đơn thành công',
+        'data': {
+            'invoiceId': invoice.invoiceId,
+            'total': invoice.total,
+            'discount': invoice.discount,
+            'vat': invoice.vat,
+            'finalTotal': invoice.finalTotal
+        }
+    }), 200
+
+
+@app.route('/api/invoices/<invoiceId>', methods=['DELETE'])
+def delete_invoice(invoiceId):
+    """
+    Xóa hóa đơn (hủy thanh toán)
+    """
+    invoice = Invoice.query.get(invoiceId)
+    if not invoice:
+        return jsonify({'success': False, 'message': 'Không tìm thấy hóa đơn'}), 404
+
+    # Xóa liên kết với booking
+    if invoice.booking:
+        invoice.booking.invoiceId = None
+
+    db.session.delete(invoice)
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': 'Xóa hóa đơn thành công'}), 200
+
+
 # REPORTS - THỐNG KÊ BÁO CÁO
 @app.route('/api/reports/revenue', methods=['GET'])
 def get_revenue_report():
@@ -514,6 +731,7 @@ def get_service_frequency_report():
             'services': result
         }
     }), 200
+
 
 # RUN APP
 if __name__ == '__main__':
