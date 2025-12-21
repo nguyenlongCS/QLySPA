@@ -1,7 +1,10 @@
 # app.py
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+import secrets
+import re
 
 # APP CONFIG
 app = Flask(__name__)
@@ -16,6 +19,20 @@ class Settings(db.Model):
     settingId = db.Column(db.String(50), primary_key=True)
     value = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(200))
+
+
+class Account(db.Model):
+    __tablename__ = 'accounts'
+    accountId = db.Column(db.String(50), primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    passwordHash = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(20), default='Customer')  # Customer, Employee, Admin
+    customerId = db.Column(db.String(50), db.ForeignKey('customers.customerId'))
+    employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'))
+    createdAt = db.Column(db.DateTime, default=datetime.now)
+
+    customer = db.relationship('Customer', backref='account', uselist=False, lazy=True)
+    employee = db.relationship('Employee', backref='account', uselist=False, lazy=True)
 
 
 class Customer(db.Model):
@@ -67,14 +84,19 @@ class Booking(db.Model):
     employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'), nullable=False)
     invoiceId = db.Column(db.String(50), db.ForeignKey('invoices.invoiceId'))
 
+
 # HELPER FUNCTIONS
+
 def get_setting_value(setting_id, default_value):
+    """Lấy giá trị cài đặt từ database"""
     setting = Settings.query.get(setting_id)
     if setting:
         return setting.value
     return default_value
 
+
 def init_default_settings():
+    """Khởi tạo các cài đặt mặc định"""
     default_settings = [
         {'settingId': 'vat_rate', 'value': '10', 'description': 'Mức VAT (%)'},
         {'settingId': 'max_bookings_per_day', 'value': '5',
@@ -93,7 +115,204 @@ def init_default_settings():
 
     db.session.commit()
 
-# CUSTOMER
+
+def generate_account_id():
+    return 'ACC' + secrets.token_hex(4).upper()
+
+
+def generate_customer_id():
+    return 'C' + secrets.token_hex(4).upper()
+
+
+# AUTHENTICATION APIs
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    data = request.get_json()
+
+    # Validate dữ liệu đầu vào
+    if not data.get('username') or not data.get('password'):
+        return jsonify({'success': False, 'message': 'Thiếu username hoặc password'}), 400
+
+    if not data.get('name') or not data.get('phone'):
+        return jsonify({'success': False, 'message': 'Thiếu thông tin name hoặc phone'}), 400
+    # Validate phone: chỉ cho phép số, 9–11 chữ số
+    phone = data['phone']
+    if not re.fullmatch(r'\d{9,11}', phone):
+        return jsonify({
+            'success': False,
+            'message': 'Số điện thoại không hợp lệ (chỉ gồm 9–11 chữ số)'
+        }), 400
+    # Kiểm tra username đã tồn tại
+    if Account.query.filter_by(username=data['username']).first():
+        return jsonify({'success': False, 'message': 'Username đã tồn tại'}), 400
+
+    # Kiểm tra độ dài password (tối thiểu 6 ký tự)
+    if len(data['password']) < 6:
+        return jsonify({'success': False, 'message': 'Password phải có ít nhất 6 ký tự'}), 400
+
+    # Tạo Customer mới
+    customer_id = generate_customer_id()
+    customer = Customer(
+        customerId=customer_id,
+        name=data['name'],
+        phone=data['phone'],
+        email=data.get('email', '')
+    )
+
+    # Hash password
+    password_hash = generate_password_hash(data['password'])
+
+    # Tạo Account mới
+    account_id = generate_account_id()
+    account = Account(
+        accountId=account_id,
+        username=data['username'],
+        passwordHash=password_hash,
+        role='Customer',
+        customerId=customer_id,
+        createdAt=datetime.now()
+    )
+
+    # Lưu vào database
+    db.session.add(customer)
+    db.session.add(account)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Đăng ký thành công',
+        'data': {
+            'accountId': account.accountId,
+            'username': account.username,
+            'role': account.role,
+            'customerId': customer_id,
+            'name': customer.name,
+            'createdAt': account.createdAt.isoformat()
+        }
+    }), 201
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    data = request.get_json()
+
+    # Validate dữ liệu đầu vào
+    if not data.get('username') or not data.get('password'):
+        return jsonify({'success': False, 'message': 'Thiếu username hoặc password'}), 400
+
+    # Tìm tài khoản theo username
+    account = Account.query.filter_by(username=data['username']).first()
+
+    # Kiểm tra tài khoản tồn tại
+    if not account:
+        return jsonify({'success': False, 'message': 'Username hoặc password không đúng'}), 401
+
+    # Kiểm tra password
+    if not check_password_hash(account.passwordHash, data['password']):
+        return jsonify({'success': False, 'message': 'Username hoặc password không đúng'}), 401
+
+    # Lấy thông tin chi tiết theo role
+    user_info = {
+        'accountId': account.accountId,
+        'username': account.username,
+        'role': account.role,
+        'createdAt': account.createdAt.isoformat()
+    }
+
+    # Nếu là Customer, lấy thông tin customer
+    if account.role == 'Customer' and account.customer:
+        user_info['customerId'] = account.customer.customerId
+        user_info['name'] = account.customer.name
+        user_info['phone'] = account.customer.phone
+        user_info['email'] = account.customer.email
+
+    # Nếu là Employee, lấy thông tin employee
+    if account.role == 'Employee' and account.employee:
+        user_info['employeeId'] = account.employee.employeeId
+        user_info['name'] = account.employee.name
+        user_info['employeeRole'] = account.employee.role
+
+    return jsonify({
+        'success': True,
+        'message': 'Đăng nhập thành công',
+        'data': user_info
+    }), 200
+
+
+@app.route('/api/auth/change-password', methods=['PUT'])
+def change_password():
+    data = request.get_json()
+
+    # Validate dữ liệu đầu vào
+    if not data.get('username') or not data.get('oldPassword') or not data.get('newPassword'):
+        return jsonify({'success': False, 'message': 'Thiếu thông tin'}), 400
+
+    # Kiểm tra độ dài password mới
+    if len(data['newPassword']) < 6:
+        return jsonify({'success': False, 'message': 'Password mới phải có ít nhất 6 ký tự'}), 400
+
+    # Tìm tài khoản
+    account = Account.query.filter_by(username=data['username']).first()
+
+    if not account:
+        return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
+
+    # Kiểm tra password cũ
+    if not check_password_hash(account.passwordHash, data['oldPassword']):
+        return jsonify({'success': False, 'message': 'Password cũ không đúng'}), 401
+
+    # Cập nhật password mới
+    account.passwordHash = generate_password_hash(data['newPassword'])
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Đổi mật khẩu thành công'
+    }), 200
+
+
+@app.route('/api/auth/profile', methods=['GET'])
+def get_profile():
+    username = request.args.get('username')
+
+    if not username:
+        return jsonify({'success': False, 'message': 'Thiếu username'}), 400
+
+    account = Account.query.filter_by(username=username).first()
+
+    if not account:
+        return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
+
+    # Lấy thông tin chi tiết
+    profile = {
+        'accountId': account.accountId,
+        'username': account.username,
+        'role': account.role,
+        'createdAt': account.createdAt.isoformat()
+    }
+
+    # Thông tin Customer
+    if account.role == 'Customer' and account.customer:
+        profile['customerId'] = account.customer.customerId
+        profile['name'] = account.customer.name
+        profile['phone'] = account.customer.phone
+        profile['email'] = account.customer.email
+
+    # Thông tin Employee
+    if account.role == 'Employee' and account.employee:
+        profile['employeeId'] = account.employee.employeeId
+        profile['name'] = account.employee.name
+        profile['employeeRole'] = account.employee.role
+
+    return jsonify({
+        'success': True,
+        'data': profile
+    }), 200
+
+
+# CUSTOMER APIs
+
 @app.route('/api/customers', methods=['POST'])
 def create_customer():
     data = request.get_json()
@@ -157,7 +376,6 @@ def delete_customer(customerId):
     if not customer:
         return jsonify({'success': False, 'message': 'Không tìm thấy khách hàng'}), 404
 
-    # Kiểm tra lịch của khách hàng
     if customer.bookings:
         return jsonify({'success': False, 'message': 'Không thể xóa khách hàng vì còn lịch'}), 400
 
@@ -166,7 +384,8 @@ def delete_customer(customerId):
     return jsonify({'success': True, 'message': 'Xóa khách hàng thành công'}), 200
 
 
-# EMPLOYEE
+# EMPLOYEE APIs
+
 @app.route('/api/employees', methods=['POST'])
 def create_employee():
     data = request.get_json()
@@ -223,7 +442,6 @@ def delete_employee(employeeId):
     if not employee:
         return jsonify({'success': False, 'message': 'Không tìm thấy nhân viên'}), 404
 
-    # Kiểm tra lịch của nhân viên
     if employee.bookings:
         return jsonify({'success': False, 'message': 'Không thể xóa nhân viên vì còn lịch'}), 400
 
@@ -231,7 +449,9 @@ def delete_employee(employeeId):
     db.session.commit()
     return jsonify({'success': True, 'message': 'Xóa nhân viên thành công'}), 200
 
-# SERVICE
+
+# SERVICE APIs ===================
+
 @app.route('/api/services/form', methods=['GET'])
 def get_service_form():
     return jsonify({
@@ -327,7 +547,6 @@ def delete_service(servicesId):
     if not service:
         return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
 
-    # Kiểm tra lịch sử dụng dịch vụ
     if service.bookings:
         return jsonify({'success': False, 'message': 'Không thể xóa dịch vụ vì có lịch sử booking'}), 400
 
@@ -335,7 +554,9 @@ def delete_service(servicesId):
     db.session.commit()
     return jsonify({'success': True, 'message': 'Xóa dịch vụ thành công'}), 200
 
-# BOOKING
+
+# BOOKING APIs
+
 @app.route('/api/bookings', methods=['POST'])
 def create_booking():
     data = request.get_json()
@@ -350,7 +571,7 @@ def create_booking():
     booking_time = datetime.fromisoformat(data['time'])
     end_time = booking_time + timedelta(minutes=service.durration)
 
-    # RULE 1: Kiểm tra lịch trùng cho nhân viên
+    # Kiểm tra lịch trùng cho nhân viên
     conflicts = Booking.query.filter(
         Booking.employeeId == employee.employeeId,
         Booking.time < end_time
@@ -361,7 +582,7 @@ def create_booking():
         if booking_time < c_end:
             return jsonify({'success': False, 'message': "Nhân viên đã có lịch trùng"}), 400
 
-    # RULE 2: Nhân viên tối đa N bookings/ngày (lấy từ settings)
+    # Kiểm tra giới hạn booking/ngày
     max_bookings = int(get_setting_value('max_bookings_per_day', '5'))
     day_start = booking_time.replace(hour=0, minute=0, second=0, microsecond=0)
     day_end = day_start + timedelta(days=1)
@@ -374,7 +595,7 @@ def create_booking():
     if count >= max_bookings:
         return jsonify({'success': False, 'message': f"Nhân viên đã đạt {max_bookings} lịch trong ngày"}), 400
 
-    # RULE 3: Kiểm tra khách hàng có lịch trùng
+    # Kiểm tra khách hàng có lịch trùng
     customer_conflicts = Booking.query.filter(
         Booking.customerId == customer.customerId,
         Booking.time < end_time
@@ -460,49 +681,41 @@ def delete_booking(bookingId):
     db.session.commit()
     return jsonify({'success': True, 'message': "Xóa lịch thành công"}), 200
 
+
 # INVOICE APIs
+
 @app.route('/api/invoices', methods=['POST'])
 def create_invoice():
+    """Tạo hóa đơn thanh toán cho booking"""
     data = request.get_json()
 
-    # Kiểm tra booking tồn tại
     booking = Booking.query.get(data['bookingId'])
     if not booking:
         return jsonify({'success': False, 'message': 'Không tìm thấy booking'}), 404
 
-    # Kiểm tra booking đã có hóa đơn chưa
     if booking.invoiceId:
         return jsonify({'success': False, 'message': 'Booking đã có hóa đơn'}), 400
 
-    # Kiểm tra mã hóa đơn trùng
     if Invoice.query.get(data['invoiceId']):
         return jsonify({'success': False, 'message': 'Mã hóa đơn đã tồn tại'}), 400
 
-    # Lấy thông tin dịch vụ
     service = Service.query.get(booking.servicesId)
 
     # Lấy cấu hình từ settings
     vat_rate = float(get_setting_value('vat_rate', '10'))
     max_discount_rate = float(get_setting_value('max_discount', '20'))
 
-    # Tính toán các giá trị
     total = service.price
 
-    # Giảm giá (nếu có), kiểm tra theo settings
     discount_percent = float(data.get('discount', 0))
     if discount_percent < 0 or discount_percent > max_discount_rate:
         return jsonify({'success': False, 'message': f'Giảm giá tối đa {max_discount_rate}%'}), 400
 
     discount = total * discount_percent / 100
-
-    # VAT theo settings (tính trên giá sau giảm)
     subtotal = total - discount
     vat = subtotal * vat_rate / 100
-
-    # Tổng tiền cuối cùng
     finalTotal = subtotal + vat
 
-    # Tạo hóa đơn
     invoice = Invoice(
         invoiceId=data['invoiceId'],
         customerId=booking.customerId,
@@ -512,7 +725,6 @@ def create_invoice():
         finalTotal=finalTotal
     )
 
-    # Liên kết hóa đơn với booking
     booking.invoiceId = data['invoiceId']
 
     db.session.add(invoice)
@@ -591,16 +803,13 @@ def update_invoice(invoiceId):
 
     data = request.get_json()
 
-    # Lấy giá gốc từ booking
     booking = invoice.booking
     service = Service.query.get(booking.servicesId)
     total = service.price
 
-    # Lấy cấu hình từ settings
     vat_rate = float(get_setting_value('vat_rate', '10'))
     max_discount_rate = float(get_setting_value('max_discount', '20'))
 
-    # Tính lại với giảm giá mới
     discount_percent = float(data.get('discount', 0))
     if discount_percent < 0 or discount_percent > max_discount_rate:
         return jsonify({'success': False, 'message': f'Giảm giá tối đa {max_discount_rate}%'}), 400
@@ -610,7 +819,6 @@ def update_invoice(invoiceId):
     vat = subtotal * vat_rate / 100
     finalTotal = subtotal + vat
 
-    # Cập nhật hóa đơn
     invoice.total = total
     invoice.discount = discount
     invoice.vat = vat
@@ -637,7 +845,6 @@ def delete_invoice(invoiceId):
     if not invoice:
         return jsonify({'success': False, 'message': 'Không tìm thấy hóa đơn'}), 404
 
-    # Xóa liên kết với booking
     if invoice.booking:
         invoice.booking.invoiceId = None
 
@@ -647,7 +854,8 @@ def delete_invoice(invoiceId):
     return jsonify({'success': True, 'message': 'Xóa hóa đơn thành công'}), 200
 
 
-# SETTINGS
+# SETTINGS APIs
+
 @app.route('/api/settings', methods=['GET'])
 def get_all_settings():
     settings = Settings.query.all()
@@ -688,22 +896,18 @@ def update_setting(settingId):
     if not new_value:
         return jsonify({'success': False, 'message': 'Thiếu giá trị cài đặt'}), 400
 
-    # Validate giá trị theo từng loại cài đặt
     try:
         if settingId == 'vat_rate':
-            # VAT phải từ 0-100%
             val = float(new_value)
             if val < 0 or val > 100:
                 return jsonify({'success': False, 'message': 'VAT phải từ 0-100%'}), 400
 
         elif settingId == 'max_bookings_per_day':
-            # Số booking phải >= 1
             val = int(new_value)
             if val < 1:
                 return jsonify({'success': False, 'message': 'Số booking/ngày phải >= 1'}), 400
 
         elif settingId == 'max_discount':
-            # Giảm giá phải từ 0-100%
             val = float(new_value)
             if val < 0 or val > 100:
                 return jsonify({'success': False, 'message': 'Giảm giá phải từ 0-100%'}), 400
@@ -711,7 +915,6 @@ def update_setting(settingId):
     except ValueError:
         return jsonify({'success': False, 'message': 'Giá trị không hợp lệ'}), 400
 
-    # Cập nhật giá trị
     setting.value = new_value
     db.session.commit()
 
@@ -745,7 +948,6 @@ def update_service_price_via_settings(servicesId):
     except ValueError:
         return jsonify({'success': False, 'message': 'Giá không hợp lệ'}), 400
 
-    # Cập nhật giá
     service.price = price
     db.session.commit()
 
@@ -759,13 +961,11 @@ def update_service_price_via_settings(servicesId):
         }
     }), 200
 
+
 # REPORTS
+
 @app.route('/api/reports/revenue', methods=['GET'])
 def get_revenue_report():
-    """
-    Báo cáo doanh thu theo tháng
-    Query params: month (MM), year (YYYY)
-    """
     month = request.args.get('month')
     year = request.args.get('year')
 
@@ -863,6 +1063,7 @@ def get_service_frequency_report():
 
 
 # RUN APP
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
