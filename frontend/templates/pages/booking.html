@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đặt Lịch Spa</title>
+</head>
+<body>
+
+    <section class="booking-container">
+        <h1>ĐẶT LỊCH</h1>
+        <p>Chỉ một bước đặt lịch, bạn sẽ có ngay trải nghiệm tuyệt vời tại OU Spa.</p>
+
+        <form id="spaBookingForm">
+            <div class="form-group">
+                <label for="name">Họ tên *</label>
+                <input type="text" id="name" name="name" required placeholder="Nhập họ tên của bạn">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="Địa chỉ email (không bắt buộc)">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Số điện thoại *</label>
+                <input type="tel" id="phone" name="phone" required pattern="[0-9]{9,11}" placeholder="Số điện thoại từ 9-11 số">
+            </div>
+
+            <div class="form-group">
+                <label for="servicesId">Dịch vụ *</label>
+                <select id="servicesId" name="servicesId" required>
+                    <option value="">-- Chọn dịch vụ --</option>
+                    <option value="S01">Massage Body (60 phút)</option>
+                    <option value="S02">Chăm sóc da mặt (45 phút)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="employeeId">Kỹ thuật viên *</label>
+                <select id="employeeId" name="employeeId" required>
+                    <option value="">-- Chọn nhân viên --</option>
+                    <option value="E01">Nhân viên Lan</option>
+                    <option value="E02">Nhân viên Hồng</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bookingDate">Ngày đặt *</label>
+                <input type="date" id="bookingDate" required>
+            </div>
+
+            <div class="form-group">
+                <label for="bookingTime">Khung giờ *</label>
+                <select id="bookingTime" required>
+                    <option value="09:00:00">09:00</option>
+                    <option value="10:00:00">10:00</option>
+                    <option value="14:00:00">14:00</option>
+                    <option value="16:00:00">16:00</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Bạn đã từng đến Spa chưa?</label><br>
+                <input type="radio" name="old_customer" value="yes"> Có
+                <input type="radio" name="old_customer" value="no"> Chưa
+            </div>
+
+            <div class="form-group">
+                <label for="note">Yêu cầu bổ sung thêm</label><br>
+                <textarea id="note" name="note" rows="4" placeholder="Ví dụ: Bạn yêu cầu thêm về KTV nam/nữ..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="discount">Mã giảm giá</label>
+                <input type="text" id="discount" name="discount" placeholder="Nhập mã nếu có">
+            </div>
+
+            <button type="submit" id="submitBtn">ĐẶT LỊCH</button>
+        </form>
+    </section>
+
+    <script>
+        document.getElementById('spaBookingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            
+            const date = document.getElementById('bookingDate').value;
+            const time = document.getElementById('bookingTime').value;
+            
+        
+            const fullDateTime = `${date}T${time}`;
+
+           
+            const bookingData = {
+                bookingId: "BK-" + Date.now(), 
+                customerId: "C-GUEST",         
+                servicesId: document.getElementById('servicesId').value,
+                employeeId: document.getElementById('employeeId').value,
+                time: fullDateTime,
+                status: "Đã xác nhận"
+            };
+
+            console.log("Dữ liệu gửi về Backend:", bookingData);
+            alert("Đã gom dữ liệu xong! Sẵn sàng gửi đến Flask.");
+        });
+    </script>
+
+</body>
+</html>

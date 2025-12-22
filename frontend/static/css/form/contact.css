@@ -1,0 +1,118 @@
+/* ===============================
+   CONTACT PAGE
+================================ */
+.contact-page header nav {
+    padding: 8px 30px;
+}
+.contact-page header {
+    background: #eee2ca;
+    position: sticky;
+    top: 0px;
+    z-index: 999;
+    height: 100px;
+}
+
+/* Menu chữ đen */
+.contact-page header nav a {
+    color: #222 !important;
+}
+
+/* Hover */
+.contact-page header nav a:hover {
+    color: #c8a24a;
+}
+/* Gạch chân tinh tế */
+.contact-page header nav a::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 0;                  
+    height: 1px;
+    background: #0e0e0e;         
+    transform: translateX(-50%);
+    transition: width 0.2s ease;
+    pointer-events: none;
+}
+
+/* Nút ĐẶT LỊCH */
+.contact-page .btn_primary {
+    background: transparent;
+    color: #222;
+    border: 1px solid #222;
+}
+.contact-page .btn_primary:hover {
+    background: #c8a24a;
+    color: #fff;
+    border-color: #c8a24a;
+}
+/* ===============================
+   CONTACT FROM
+================================ */
+.form-group.error input,
+.form-group.error textarea {
+  border: 1px solid #e53935;
+}
+
+.form-group::after {
+  content: attr(data-error);
+  display: none;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #e53935;
+}
+
+.form-group.error::after {
+  display: block;
+}
+/* ===============================
+   FORM VALIDATION ERROR (JS)
+================================ */
+
+/* form-group có lỗi */
+.form-group.error {
+    position: relative;
+}
+
+/* viền input khi lỗi */
+.form-group.error input,
+.form-group.error textarea {
+    outline: 2px solid #ff9800;
+    outline-offset: -2px;
+}
+
+/* tooltip lỗi */
+.form-group.error::after {
+    content: "⚠️ " attr(data-error);
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+
+    background: #fff4e5;
+    color: #6a3b00;
+    font-size: 13px;
+    line-height: 1.4;
+
+    padding: 8px 12px;
+    border-radius: 6px;
+
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    white-space: nowrap;
+    z-index: 10;
+}
+
+/* mũi tên tooltip */
+.form-group.error::before {
+    content: "";
+    position: absolute;
+    right: 20px;
+    top: calc(100% + 2px);
+
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid #fff4e5;
+}
+

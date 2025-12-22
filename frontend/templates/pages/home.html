@@ -1,0 +1,25 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Trang Chủ{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/hero.css') }}"> 
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <video class="hero-video" autoplay loop muted>
+        <source src="{{ url_for('static', filename='videos/video2.mp4')}}" type="video/mp4">
+    </video>
+    <div class="hero-content">
+        <p class="hero-subtitle">- Cửa hàng Spa hàng đầu Việt Nam - </p>
+        <h1 class="hero-title">OU Spa</h1>
+
+        <p class="hero-desc">
+            Chăm sóc sức khỏe và sắc đẹp chuyên nghiệp với dịch vụ
+            tận tâm và không gian thư giãn đẳng cấp. 100% đội ngũ nhân viên tại OU Spa được đào tạo bài bản, nhiệt tình và chu đáo. 
+        </p>
+
+        <a href="https://maps.app.goo.gl/3PKujJPdkPPmXeuK6" class="btn-map">Xem Bản Đồ</a>
+    </div>
+</section>
+{% endblock %}

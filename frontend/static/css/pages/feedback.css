@@ -1,0 +1,175 @@
+.feedback-page header nav {
+        padding-top: 8px;
+        padding-bottom: 8px;
+        padding-left: 30px;
+        padding-right: 30px;
+    }
+    .feedback-page header {
+        background: #eee2ca;
+        position: sticky;
+        top: 0px;
+        z-index: 999;
+        height: 100px;
+    }
+
+    .feedback-page header nav a {
+        color: #222 !important;
+    }
+
+    .feedback-page header nav a:hover {
+        color: #c8a24a;
+    }
+
+    .feedback-page header nav a::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -3px;
+        width: 0;                  
+        height: 1px;
+        background: #0e0e0e;         
+        transform: translateX(-50%);
+        transition: width 0.2s ease;
+        pointer-events: none;
+    }
+
+    .feedback-page .btn_primary {
+        background: transparent;
+        color: #222;
+        border: 1px solid #222;
+    }
+
+    .feedback-page .btn_primary:hover {
+        background: #c8a24a;
+        color: #fff;
+        border-color: #c8a24a;
+    }
+/* ================= FEEDBACK SLIDER 1 ================= */
+  .feedback-wrapper-text1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 60px 15% 60px;
+    background: #d8c18ccc;
+}
+
+.feedback-text1-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 60px;
+    font-weight: 100;
+    letter-spacing: -1px;
+    margin-bottom: 50px;
+    transform: scaleY(1.1);
+}
+
+.feedback-slider-1 {
+    width: 100%;
+    overflow: hidden;
+    margin: 60px 40px;
+    height: 400px;
+}
+
+.slider-track1 {
+    display: flex;
+    width: max-content;
+    animation: feedback-scroll-1 28s linear infinite;
+}
+
+.slide1 {
+    width: 320px;
+    margin: 0 20px;
+    flex-shrink: 0;
+}
+
+.slide1 img {
+    width: 100%;
+}
+
+/* Hover dừng */
+.feedback-slider-1:hover .slider-track1 {
+    animation-play-state: paused;
+}
+
+@keyframes feedback-scroll-1 {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+/* ================= FEEDBACK SLIDER 2 ================= */
+.feedback-wrapper-text2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 60px 15% 60px;
+    background: #ffffffcc;
+}
+
+.feedback-text2-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 60px;
+    font-weight: 100;
+    letter-spacing: -1px;
+    margin-bottom: 50px;
+    transform: scaleY(1.1);
+}
+.feedback-slider-2 {
+    width: 100%;
+    overflow: hidden;
+    margin: 60px 40px;
+    height: 400px;
+}
+
+.slider-track-2 {
+    display: flex;
+    width: max-content;
+    animation: feedback-scroll-2 35s linear infinite;
+}
+
+.slide2 {
+    width: 360px;
+    margin: 0 24px;
+    flex-shrink: 0;
+}
+
+.slide2 img {
+    width: 100%;
+}
+
+/* Hover dừng */
+.feedback-slider-2:hover .slider-track-2 {
+    animation-play-state: paused;
+}
+
+@keyframes feedback-scroll-2 {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+/* ===== CHO PHÉP KÉO NGANG ===== */
+.slider-track1,
+.slider-track-2 {
+    cursor: grab;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.slider-track1::-webkit-scrollbar,
+.slider-track-2::-webkit-scrollbar {
+    display: none;
+}
+
+/* Khi người dùng đang kéo */
+.slider-track1.dragging,
+.slider-track-2.dragging {
+    cursor: grabbing;
+    animation-play-state: paused !important;
+}
+
