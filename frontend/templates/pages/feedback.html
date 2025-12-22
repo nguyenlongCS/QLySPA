@@ -1,6 +1,7 @@
 
 {% extends 'layouts/base.html' %}
 {% block title %}Feedback | OU Spa{% endblock %}
+<script src="{{ url_for('static', filename='js/feedback.js') }}"></script>
 {% block page_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback.css') }}">
 {% endblock %}
@@ -11,16 +12,75 @@
     <div class="feedback-wrapper-text1">
 <div class="feedback-text1">
     <h1 class="feedback-text1-title">
-    TRÃI NGHIỆM KHÁCH HÀNG</h1> 
+    FeedBack</h1> 
     </div>
+    <!-- FEEDBACK SLIDER -->
+<div class="feedback-slider-1">
+    <div class="slider-track1">
+
+        <div class="slide1">
+            <img src="{{ url_for('static', filename='images/feed_back1.png') }}">
+        </div>
+
+        <div class="slide1">
+            <img src="{{ url_for('static', filename='images/feed_back2.png') }}">
+        </div>
+
+        <div class="slide1">
+            <img src="{{ url_for('static', filename='images/feed_back3.png') }}">
+        </div>
+
+        <div class="slide1">
+            <img src="{{ url_for('static', filename='images/feed_back4.png') }}">
+        </div>
+
+        <div class="slide1">
+            <img src="{{ url_for('static', filename='images/feed_back5.png') }}">
+        </div>
+
+        <div class="slide1">
+            <img src="{{ url_for('static', filename='images/feed_back7.png') }}">
+        </div>
+    </div>
+</div>
 </div>
 
 
 <div class="feedback-wrapper-text2">
 <div class="feedback-text2">
     <h1 class="feedback-text2-title">
-    REVIEW KHÁCH HÀNG TRÊN GG MAP</h1> 
+    Review khách hàng trên GG Map</h1> 
     </div>
+    <div class="feedback-slider-2">
+    <div class="slider-track-2">
+
+        <div class="slide2">
+            <img src="{{ url_for('static', filename='images/feed_back_gg1.png') }}">
+        </div>
+
+        <div class="slide2">
+            <img src="{{ url_for('static', filename='images/feed_back_gg2.png') }}">
+        </div>
+
+        <div class="slide2">
+            <img src="{{ url_for('static', filename='images/feed_back_gg3.png') }}">
+        </div>
+
+        <div class="slide2">
+            <img src="{{ url_for('static', filename='images/feed_back_gg4.png') }}">
+        </div>
+
+        <div class="slide2">
+            <img src="{{ url_for('static', filename='images/feed_back_gg1.png') }}">
+        </div>
+
+        <div class="slide2">
+            <img src="{{ url_for('static', filename='images/feed_back_gg2.png') }}">
+        </div>
+        <button class="slider-btn prev" onclick="slidePrev(2)">❮</button>
+        <button class="slider-btn next" onclick="slideNext(2)">❯</button>
+    </div>
+</div>
 </div>
 
 
