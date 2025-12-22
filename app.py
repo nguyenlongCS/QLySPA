@@ -1,133 +1,23 @@
 # app.py
-from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timedelta
-import secrets
+from datetime import datetime
 import re
 
-# APP CONFIG
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///spa_booking.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JSON_AS_ASCII'] = False
+from __init__ import create_app, db
+from models import Service, Customer, Employee, Booking
+import dao
+from dao import *
 
-db = SQLAlchemy(app)
-
-class Settings(db.Model):
-    __tablename__ = 'settings'
-    settingId = db.Column(db.String(50), primary_key=True)
-    value = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(200))
-
-
-class Account(db.Model):
-    __tablename__ = 'accounts'
-    accountId = db.Column(db.String(50), primary_key=True)
-    username = db.Column(db.String(50), unique=True, nullable=False)
-    passwordHash = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='Customer')  # Customer, Employee, Admin
-    customerId = db.Column(db.String(50), db.ForeignKey('customers.customerId'))
-    employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'))
-    createdAt = db.Column(db.DateTime, default=datetime.now)
-
-    customer = db.relationship('Customer', backref='account', uselist=False, lazy=True)
-    employee = db.relationship('Employee', backref='account', uselist=False, lazy=True)
-
-
-class Customer(db.Model):
-    __tablename__ = 'customers'
-    customerId = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    phone = db.Column(db.String(20), nullable=False)
-    email = db.Column(db.String(100))
-    bookings = db.relationship('Booking', backref='customer', lazy=True)
-
-
-class Service(db.Model):
-    __tablename__ = 'services'
-    servicesId = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    durration = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Float, nullable=False)
-    note = db.Column(db.String(200))
-    bookings = db.relationship('Booking', backref='service', lazy=True)
-
-
-class Employee(db.Model):
-    __tablename__ = 'employees'
-    employeeId = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    role = db.Column(db.String(50), nullable=False)
-    bookings = db.relationship('Booking', backref='employee', lazy=True)
-
-
-class Invoice(db.Model):
-    __tablename__ = 'invoices'
-    invoiceId = db.Column(db.String(50), primary_key=True)
-    customerId = db.Column(db.String(50), db.ForeignKey('customers.customerId'), nullable=False)
-    total = db.Column(db.Float, nullable=False)
-    vat = db.Column(db.Float, nullable=False)
-    discount = db.Column(db.Float, default=0)
-    finalTotal = db.Column(db.Float, nullable=False)
-    customer = db.relationship('Customer', backref='invoices', lazy=True)
-    booking = db.relationship('Booking', backref='invoice', uselist=False, lazy=True)
-
-
-class Booking(db.Model):
-    __tablename__ = 'bookings'
-    bookingId = db.Column(db.String(50), primary_key=True)
-    time = db.Column(db.DateTime, nullable=False)
-    status = db.Column(db.String(20), default='Đã xác nhận')
-    customerId = db.Column(db.String(50), db.ForeignKey('customers.customerId'), nullable=False)
-    servicesId = db.Column(db.String(50), db.ForeignKey('services.servicesId'), nullable=False)
-    employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'), nullable=False)
-    invoiceId = db.Column(db.String(50), db.ForeignKey('invoices.invoiceId'))
-
-
-# HELPER FUNCTIONS
-
-def get_setting_value(setting_id, default_value):
-    """Lấy giá trị cài đặt từ database"""
-    setting = Settings.query.get(setting_id)
-    if setting:
-        return setting.value
-    return default_value
-
-
-def init_default_settings():
-    """Khởi tạo các cài đặt mặc định"""
-    default_settings = [
-        {'settingId': 'vat_rate', 'value': '10', 'description': 'Mức VAT (%)'},
-        {'settingId': 'max_bookings_per_day', 'value': '5',
-         'description': 'Số lượng booking tối đa mỗi nhân viên mỗi ngày'},
-        {'settingId': 'max_discount', 'value': '20', 'description': 'Phần trăm giảm giá tối đa (%)'}
-    ]
-
-    for setting in default_settings:
-        if not Settings.query.get(setting['settingId']):
-            new_setting = Settings(
-                settingId=setting['settingId'],
-                value=setting['value'],
-                description=setting['description']
-            )
-            db.session.add(new_setting)
-
-    db.session.commit()
-
-
-def generate_account_id():
-    return 'ACC' + secrets.token_hex(4).upper()
-
-
-def generate_customer_id():
-    return 'C' + secrets.token_hex(4).upper()
+# Tạo Flask app
+app = create_app()
 
 
 # AUTHENTICATION APIs
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
+    """Đăng ký tài khoản mới"""
     data = request.get_json()
 
     # Validate dữ liệu đầu vào
@@ -136,6 +26,7 @@ def register():
 
     if not data.get('name') or not data.get('phone'):
         return jsonify({'success': False, 'message': 'Thiếu thông tin name hoặc phone'}), 400
+
     # Validate phone: chỉ cho phép số, 9–11 chữ số
     phone = data['phone']
     if not re.fullmatch(r'\d{9,11}', phone):
@@ -143,8 +34,9 @@ def register():
             'success': False,
             'message': 'Số điện thoại không hợp lệ (chỉ gồm 9–11 chữ số)'
         }), 400
+
     # Kiểm tra username đã tồn tại
-    if Account.query.filter_by(username=data['username']).first():
+    if dao.get_account_by_username(data['username']):
         return jsonify({'success': False, 'message': 'Username đã tồn tại'}), 400
 
     # Kiểm tra độ dài password (tối thiểu 6 ký tự)
@@ -152,32 +44,24 @@ def register():
         return jsonify({'success': False, 'message': 'Password phải có ít nhất 6 ký tự'}), 400
 
     # Tạo Customer mới
-    customer_id = generate_customer_id()
-    customer = Customer(
-        customerId=customer_id,
-        name=data['name'],
-        phone=data['phone'],
-        email=data.get('email', '')
-    )
+    customer_id = dao.generate_customer_id()
+    customer_data = {
+        'customerId': customer_id,
+        'name': data['name'],
+        'phone': data['phone'],
+        'email': data.get('email', '')
+    }
+    customer = dao.create_customer(customer_data)
 
-    # Hash password
+    # Hash password và tạo Account mới
     password_hash = generate_password_hash(data['password'])
-
-    # Tạo Account mới
-    account_id = generate_account_id()
-    account = Account(
-        accountId=account_id,
-        username=data['username'],
-        passwordHash=password_hash,
-        role='Customer',
-        customerId=customer_id,
-        createdAt=datetime.now()
-    )
-
-    # Lưu vào database
-    db.session.add(customer)
-    db.session.add(account)
-    db.session.commit()
+    account_data = {
+        'accountId': dao.generate_account_id(),
+        'username': data['username'],
+        'passwordHash': password_hash,
+        'role': 'Customer'
+    }
+    account = dao.create_account(account_data, customer_id)
 
     return jsonify({
         'success': True,
@@ -195,6 +79,7 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
+    """Đăng nhập"""
     data = request.get_json()
 
     # Validate dữ liệu đầu vào
@@ -202,7 +87,7 @@ def login():
         return jsonify({'success': False, 'message': 'Thiếu username hoặc password'}), 400
 
     # Tìm tài khoản theo username
-    account = Account.query.filter_by(username=data['username']).first()
+    account = dao.get_account_by_username(data['username'])
 
     # Kiểm tra tài khoản tồn tại
     if not account:
@@ -242,6 +127,7 @@ def login():
 
 @app.route('/api/auth/change-password', methods=['PUT'])
 def change_password():
+    """Đổi mật khẩu"""
     data = request.get_json()
 
     # Validate dữ liệu đầu vào
@@ -253,7 +139,7 @@ def change_password():
         return jsonify({'success': False, 'message': 'Password mới phải có ít nhất 6 ký tự'}), 400
 
     # Tìm tài khoản
-    account = Account.query.filter_by(username=data['username']).first()
+    account = dao.get_account_by_username(data['username'])
 
     if not account:
         return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
@@ -263,8 +149,8 @@ def change_password():
         return jsonify({'success': False, 'message': 'Password cũ không đúng'}), 401
 
     # Cập nhật password mới
-    account.passwordHash = generate_password_hash(data['newPassword'])
-    db.session.commit()
+    new_password_hash = generate_password_hash(data['newPassword'])
+    dao.update_account_password(data['username'], new_password_hash)
 
     return jsonify({
         'success': True,
@@ -274,12 +160,13 @@ def change_password():
 
 @app.route('/api/auth/profile', methods=['GET'])
 def get_profile():
+    """Lấy thông tin profile"""
     username = request.args.get('username')
 
     if not username:
         return jsonify({'success': False, 'message': 'Thiếu username'}), 400
 
-    account = Account.query.filter_by(username=username).first()
+    account = dao.get_account_by_username(username)
 
     if not account:
         return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
@@ -315,21 +202,16 @@ def get_profile():
 
 @app.route('/api/customers', methods=['POST'])
 def create_customer():
+    """Tạo khách hàng mới"""
     data = request.get_json()
-    customer = Customer(
-        customerId=data['customerId'],
-        name=data['name'],
-        phone=data['phone'],
-        email=data.get('email', '')
-    )
-    db.session.add(customer)
-    db.session.commit()
+    dao.create_customer(data)
     return jsonify({'success': True, 'message': "Tạo khách hàng thành công"}), 201
 
 
 @app.route('/api/customers', methods=['GET'])
 def get_customers():
-    customers = Customer.query.all()
+    """Lấy danh sách khách hàng"""
+    customers = dao.get_all_customers()
     data = [{
         'customerId': c.customerId,
         'name': c.name,
@@ -341,7 +223,8 @@ def get_customers():
 
 @app.route('/api/customers/<customerId>', methods=['GET'])
 def get_customer(customerId):
-    customer = Customer.query.get(customerId)
+    """Lấy thông tin khách hàng theo ID"""
+    customer = dao.get_customer_by_id(customerId)
     if not customer:
         return jsonify({'success': False, 'message': 'Không tìm thấy khách hàng'}), 404
     return jsonify({
@@ -357,30 +240,28 @@ def get_customer(customerId):
 
 @app.route('/api/customers/<customerId>', methods=['PUT'])
 def update_customer(customerId):
-    customer = Customer.query.get(customerId)
+    """Cập nhật thông tin khách hàng"""
+    customer = dao.get_customer_by_id(customerId)
     if not customer:
         return jsonify({'success': False, 'message': 'Không tìm thấy khách hàng'}), 404
 
     data = request.get_json()
-    customer.name = data.get('name', customer.name)
-    customer.phone = data.get('phone', customer.phone)
-    customer.email = data.get('email', customer.email)
-    db.session.commit()
+    dao.update_customer(customerId, data)
 
     return jsonify({'success': True, 'message': 'Cập nhật khách hàng thành công'}), 200
 
 
 @app.route('/api/customers/<customerId>', methods=['DELETE'])
 def delete_customer(customerId):
-    customer = Customer.query.get(customerId)
+    """Xóa khách hàng"""
+    customer = dao.get_customer_by_id(customerId)
     if not customer:
         return jsonify({'success': False, 'message': 'Không tìm thấy khách hàng'}), 404
 
     if customer.bookings:
         return jsonify({'success': False, 'message': 'Không thể xóa khách hàng vì còn lịch'}), 400
 
-    db.session.delete(customer)
-    db.session.commit()
+    dao.delete_customer(customerId)
     return jsonify({'success': True, 'message': 'Xóa khách hàng thành công'}), 200
 
 
@@ -388,20 +269,16 @@ def delete_customer(customerId):
 
 @app.route('/api/employees', methods=['POST'])
 def create_employee():
+    """Tạo nhân viên mới"""
     data = request.get_json()
-    employee = Employee(
-        employeeId=data['employeeId'],
-        name=data['name'],
-        role=data['role']
-    )
-    db.session.add(employee)
-    db.session.commit()
+    dao.create_employee(data)
     return jsonify({'success': True, 'message': "Tạo nhân viên thành công"}), 201
 
 
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
-    employees = Employee.query.all()
+    """Lấy danh sách nhân viên"""
+    employees = dao.get_all_employees()
     data = [{
         'employeeId': e.employeeId,
         'name': e.name,
@@ -412,7 +289,8 @@ def get_employees():
 
 @app.route('/api/employees/<employeeId>', methods=['GET'])
 def get_employee(employeeId):
-    employee = Employee.query.get(employeeId)
+    """Lấy thông tin nhân viên theo ID"""
+    employee = dao.get_employee_by_id(employeeId)
     if not employee:
         return jsonify({'success': False, 'message': 'Không tìm thấy nhân viên'}), 404
     return jsonify({'success': True, 'data': {
@@ -424,36 +302,36 @@ def get_employee(employeeId):
 
 @app.route('/api/employees/<employeeId>', methods=['PUT'])
 def update_employee(employeeId):
-    employee = Employee.query.get(employeeId)
+    """Cập nhật thông tin nhân viên"""
+    employee = dao.get_employee_by_id(employeeId)
     if not employee:
         return jsonify({'success': False, 'message': 'Không tìm thấy nhân viên'}), 404
 
     data = request.get_json()
-    employee.name = data.get('name', employee.name)
-    employee.role = data.get('role', employee.role)
-    db.session.commit()
+    dao.update_employee(employeeId, data)
 
     return jsonify({'success': True, 'message': 'Cập nhật nhân viên thành công'}), 200
 
 
 @app.route('/api/employees/<employeeId>', methods=['DELETE'])
 def delete_employee(employeeId):
-    employee = Employee.query.get(employeeId)
+    """Xóa nhân viên"""
+    employee = dao.get_employee_by_id(employeeId)
     if not employee:
         return jsonify({'success': False, 'message': 'Không tìm thấy nhân viên'}), 404
 
     if employee.bookings:
         return jsonify({'success': False, 'message': 'Không thể xóa nhân viên vì còn lịch'}), 400
 
-    db.session.delete(employee)
-    db.session.commit()
+    dao.delete_employee(employeeId)
     return jsonify({'success': True, 'message': 'Xóa nhân viên thành công'}), 200
 
 
-# SERVICE APIs ===================
+# SERVICE APIs
 
 @app.route('/api/services/form', methods=['GET'])
 def get_service_form():
+    """Lấy form dịch vụ"""
     return jsonify({
         'success': True,
         'form': {
@@ -471,31 +349,24 @@ def get_service_form():
 
 @app.route('/api/services/submit', methods=['POST'])
 def create_service():
+    """Tạo dịch vụ mới"""
     data = request.get_json()
 
-    if Service.query.get(data['servicesId']):
+    if dao.get_service_by_id(data['servicesId']):
         return jsonify({'success': False, 'message': 'Mã dịch vụ đã tồn tại'}), 400
 
     d = int(data['durration'])
     if d < 15 or d > 120:
         return jsonify({'success': False, 'message': 'Thời lượng dịch vụ phải từ 15-120 phút'}), 400
 
-    service = Service(
-        servicesId=data['servicesId'],
-        name=data['name'],
-        durration=d,
-        price=float(data['price']),
-        note=data.get('note', '')
-    )
-    db.session.add(service)
-    db.session.commit()
-
+    dao.create_service(data)
     return jsonify({'success': True, 'message': "Tạo dịch vụ thành công"}), 201
 
 
 @app.route('/api/services', methods=['GET'])
 def get_services():
-    services = Service.query.all()
+    """Lấy danh sách dịch vụ"""
+    services = dao.get_all_services()
     data = [{
         'servicesId': s.servicesId,
         'name': s.name,
@@ -508,7 +379,8 @@ def get_services():
 
 @app.route('/api/services/<servicesId>', methods=['GET'])
 def get_service(servicesId):
-    service = Service.query.get(servicesId)
+    """Lấy thông tin dịch vụ theo ID"""
+    service = dao.get_service_by_id(servicesId)
     if not service:
         return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
     return jsonify({'success': True, 'data': {
@@ -522,7 +394,8 @@ def get_service(servicesId):
 
 @app.route('/api/services/<servicesId>', methods=['PUT'])
 def update_service(servicesId):
-    service = Service.query.get(servicesId)
+    """Cập nhật thông tin dịch vụ"""
+    service = dao.get_service_by_id(servicesId)
     if not service:
         return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
 
@@ -531,27 +404,22 @@ def update_service(servicesId):
         d = int(data["durration"])
         if d < 15 or d > 120:
             return jsonify({'success': False, 'message': 'Thời lượng dịch vụ phải từ 15-120 phút'}), 400
-        service.durration = d
 
-    service.name = data.get('name', service.name)
-    service.price = float(data.get('price', service.price))
-    service.note = data.get('note', service.note)
-    db.session.commit()
-
+    dao.update_service(servicesId, data)
     return jsonify({'success': True, 'message': 'Cập nhật dịch vụ thành công'}), 200
 
 
 @app.route('/api/services/<servicesId>', methods=['DELETE'])
 def delete_service(servicesId):
-    service = Service.query.get(servicesId)
+    """Xóa dịch vụ"""
+    service = dao.get_service_by_id(servicesId)
     if not service:
         return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
 
     if service.bookings:
         return jsonify({'success': False, 'message': 'Không thể xóa dịch vụ vì có lịch sử booking'}), 400
 
-    db.session.delete(service)
-    db.session.commit()
+    dao.delete_service(servicesId)
     return jsonify({'success': True, 'message': 'Xóa dịch vụ thành công'}), 200
 
 
@@ -559,72 +427,42 @@ def delete_service(servicesId):
 
 @app.route('/api/bookings', methods=['POST'])
 def create_booking():
+    """Tạo booking mới"""
     data = request.get_json()
 
-    customer = Customer.query.get(data['customerId'])
-    service = Service.query.get(data['servicesId'])
-    employee = Employee.query.get(data['employeeId'])
+    customer = dao.get_customer_by_id(data['customerId'])
+    service = dao.get_service_by_id(data['servicesId'])
+    employee = dao.get_employee_by_id(data['employeeId'])
 
     if not customer or not service or not employee:
         return jsonify({'success': False, 'message': 'Sai thông tin customer/service/employee'}), 404
 
     booking_time = datetime.fromisoformat(data['time'])
-    end_time = booking_time + timedelta(minutes=service.durration)
 
     # Kiểm tra lịch trùng cho nhân viên
-    conflicts = Booking.query.filter(
-        Booking.employeeId == employee.employeeId,
-        Booking.time < end_time
-    ).all()
-
-    for c in conflicts:
-        c_end = c.time + timedelta(minutes=Service.query.get(c.servicesId).durration)
-        if booking_time < c_end:
-            return jsonify({'success': False, 'message': "Nhân viên đã có lịch trùng"}), 400
+    if dao.check_employee_booking_conflicts(employee.employeeId, booking_time, service.durration):
+        return jsonify({'success': False, 'message': "Nhân viên đã có lịch trùng"}), 400
 
     # Kiểm tra giới hạn booking/ngày
-    max_bookings = int(get_setting_value('max_bookings_per_day', '5'))
-    day_start = booking_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    day_end = day_start + timedelta(days=1)
-    count = Booking.query.filter(
-        Booking.employeeId == employee.employeeId,
-        Booking.time >= day_start,
-        Booking.time < day_end
-    ).count()
+    max_bookings = int(dao.get_setting_value('max_bookings_per_day', '5'))
+    count = dao.count_employee_bookings_on_date(employee.employeeId, booking_time)
 
     if count >= max_bookings:
         return jsonify({'success': False, 'message': f"Nhân viên đã đạt {max_bookings} lịch trong ngày"}), 400
 
     # Kiểm tra khách hàng có lịch trùng
-    customer_conflicts = Booking.query.filter(
-        Booking.customerId == customer.customerId,
-        Booking.time < end_time
-    ).all()
-
-    for c in customer_conflicts:
-        c_end = c.time + timedelta(minutes=Service.query.get(c.servicesId).durration)
-        if booking_time < c_end:
-            return jsonify({'success': False, 'message': "Khách hàng đã có lịch trùng"}), 400
+    if dao.check_customer_booking_conflicts(customer.customerId, booking_time, service.durration):
+        return jsonify({'success': False, 'message': "Khách hàng đã có lịch trùng"}), 400
 
     # Tạo booking
-    booking = Booking(
-        bookingId=data['bookingId'],
-        time=booking_time,
-        status=data.get('status', 'Đã xác nhận'),
-        customerId=data['customerId'],
-        servicesId=data['servicesId'],
-        employeeId=data['employeeId']
-    )
-
-    db.session.add(booking)
-    db.session.commit()
-
+    dao.create_booking(data)
     return jsonify({'success': True, 'message': "Tạo lịch thành công"}), 201
 
 
 @app.route('/api/bookings', methods=['GET'])
 def get_bookings():
-    bookings = Booking.query.all()
+    """Lấy danh sách booking"""
+    bookings = dao.get_all_bookings()
     data = []
     for b in bookings:
         data.append({
@@ -640,7 +478,8 @@ def get_bookings():
 
 @app.route('/api/bookings/<bookingId>', methods=['GET'])
 def get_booking(bookingId):
-    b = Booking.query.get(bookingId)
+    """Lấy thông tin booking theo ID"""
+    b = dao.get_booking_by_id(bookingId)
     if not b:
         return jsonify({'success': False, 'message': 'Không tìm thấy lịch'}), 404
 
@@ -656,29 +495,24 @@ def get_booking(bookingId):
 
 @app.route('/api/bookings/<bookingId>', methods=['PUT'])
 def update_booking(bookingId):
-    booking = Booking.query.get(bookingId)
+    """Cập nhật booking"""
+    booking = dao.get_booking_by_id(bookingId)
     if not booking:
         return jsonify({'success': False, 'message': 'Không tìm thấy lịch'}), 404
 
     data = request.get_json()
-
-    if "time" in data:
-        booking.time = datetime.fromisoformat(data['time'])
-
-    booking.status = data.get('status', booking.status)
-
-    db.session.commit()
+    dao.update_booking(bookingId, data)
     return jsonify({'success': True, 'message': "Cập nhật lịch thành công"}), 200
 
 
 @app.route('/api/bookings/<bookingId>', methods=['DELETE'])
 def delete_booking(bookingId):
-    booking = Booking.query.get(bookingId)
+    """Xóa booking"""
+    booking = dao.get_booking_by_id(bookingId)
     if not booking:
         return jsonify({'success': False, 'message': 'Không tìm thấy lịch'}), 404
 
-    db.session.delete(booking)
-    db.session.commit()
+    dao.delete_booking(bookingId)
     return jsonify({'success': True, 'message': "Xóa lịch thành công"}), 200
 
 
@@ -689,21 +523,21 @@ def create_invoice():
     """Tạo hóa đơn thanh toán cho booking"""
     data = request.get_json()
 
-    booking = Booking.query.get(data['bookingId'])
+    booking = dao.get_booking_by_id(data['bookingId'])
     if not booking:
         return jsonify({'success': False, 'message': 'Không tìm thấy booking'}), 404
 
     if booking.invoiceId:
         return jsonify({'success': False, 'message': 'Booking đã có hóa đơn'}), 400
 
-    if Invoice.query.get(data['invoiceId']):
+    if dao.get_invoice_by_id(data['invoiceId']):
         return jsonify({'success': False, 'message': 'Mã hóa đơn đã tồn tại'}), 400
 
     service = Service.query.get(booking.servicesId)
 
     # Lấy cấu hình từ settings
-    vat_rate = float(get_setting_value('vat_rate', '10'))
-    max_discount_rate = float(get_setting_value('max_discount', '20'))
+    vat_rate = float(dao.get_setting_value('vat_rate', '10'))
+    max_discount_rate = float(dao.get_setting_value('max_discount', '20'))
 
     total = service.price
 
@@ -716,19 +550,16 @@ def create_invoice():
     vat = subtotal * vat_rate / 100
     finalTotal = subtotal + vat
 
-    invoice = Invoice(
-        invoiceId=data['invoiceId'],
-        customerId=booking.customerId,
-        total=total,
-        vat=vat,
-        discount=discount,
-        finalTotal=finalTotal
-    )
+    invoice_data = {
+        'invoiceId': data['invoiceId'],
+        'customerId': booking.customerId,
+        'total': total,
+        'vat': vat,
+        'discount': discount,
+        'finalTotal': finalTotal
+    }
 
-    booking.invoiceId = data['invoiceId']
-
-    db.session.add(invoice)
-    db.session.commit()
+    invoice = dao.create_invoice(invoice_data, data['bookingId'])
 
     return jsonify({
         'success': True,
@@ -748,7 +579,8 @@ def create_invoice():
 
 @app.route('/api/invoices', methods=['GET'])
 def get_invoices():
-    invoices = Invoice.query.all()
+    """Lấy danh sách hóa đơn"""
+    invoices = dao.get_all_invoices()
     data = []
 
     for inv in invoices:
@@ -770,7 +602,8 @@ def get_invoices():
 
 @app.route('/api/invoices/<invoiceId>', methods=['GET'])
 def get_invoice(invoiceId):
-    invoice = Invoice.query.get(invoiceId)
+    """Lấy thông tin hóa đơn theo ID"""
+    invoice = dao.get_invoice_by_id(invoiceId)
     if not invoice:
         return jsonify({'success': False, 'message': 'Không tìm thấy hóa đơn'}), 404
 
@@ -797,7 +630,8 @@ def get_invoice(invoiceId):
 
 @app.route('/api/invoices/<invoiceId>', methods=['PUT'])
 def update_invoice(invoiceId):
-    invoice = Invoice.query.get(invoiceId)
+    """Cập nhật hóa đơn"""
+    invoice = dao.get_invoice_by_id(invoiceId)
     if not invoice:
         return jsonify({'success': False, 'message': 'Không tìm thấy hóa đơn'}), 404
 
@@ -807,8 +641,8 @@ def update_invoice(invoiceId):
     service = Service.query.get(booking.servicesId)
     total = service.price
 
-    vat_rate = float(get_setting_value('vat_rate', '10'))
-    max_discount_rate = float(get_setting_value('max_discount', '20'))
+    vat_rate = float(dao.get_setting_value('vat_rate', '10'))
+    max_discount_rate = float(dao.get_setting_value('max_discount', '20'))
 
     discount_percent = float(data.get('discount', 0))
     if discount_percent < 0 or discount_percent > max_discount_rate:
@@ -819,38 +653,36 @@ def update_invoice(invoiceId):
     vat = subtotal * vat_rate / 100
     finalTotal = subtotal + vat
 
-    invoice.total = total
-    invoice.discount = discount
-    invoice.vat = vat
-    invoice.finalTotal = finalTotal
+    invoice_data = {
+        'total': total,
+        'discount': discount,
+        'vat': vat,
+        'finalTotal': finalTotal
+    }
 
-    db.session.commit()
+    dao.update_invoice(invoiceId, invoice_data)
 
     return jsonify({
         'success': True,
         'message': 'Cập nhật hóa đơn thành công',
         'data': {
             'invoiceId': invoice.invoiceId,
-            'total': invoice.total,
-            'discount': invoice.discount,
-            'vat': invoice.vat,
-            'finalTotal': invoice.finalTotal
+            'total': total,
+            'discount': discount,
+            'vat': vat,
+            'finalTotal': finalTotal
         }
     }), 200
 
 
 @app.route('/api/invoices/<invoiceId>', methods=['DELETE'])
 def delete_invoice(invoiceId):
-    invoice = Invoice.query.get(invoiceId)
+    """Xóa hóa đơn"""
+    invoice = dao.get_invoice_by_id(invoiceId)
     if not invoice:
         return jsonify({'success': False, 'message': 'Không tìm thấy hóa đơn'}), 404
 
-    if invoice.booking:
-        invoice.booking.invoiceId = None
-
-    db.session.delete(invoice)
-    db.session.commit()
-
+    dao.delete_invoice(invoiceId)
     return jsonify({'success': True, 'message': 'Xóa hóa đơn thành công'}), 200
 
 
@@ -858,7 +690,8 @@ def delete_invoice(invoiceId):
 
 @app.route('/api/settings', methods=['GET'])
 def get_all_settings():
-    settings = Settings.query.all()
+    """Lấy tất cả cài đặt"""
+    settings = dao.get_all_settings()
     data = [{
         'settingId': s.settingId,
         'value': s.value,
@@ -870,7 +703,8 @@ def get_all_settings():
 
 @app.route('/api/settings/<settingId>', methods=['GET'])
 def get_setting(settingId):
-    setting = Settings.query.get(settingId)
+    """Lấy cài đặt theo ID"""
+    setting = dao.get_setting_by_id(settingId)
     if not setting:
         return jsonify({'success': False, 'message': 'Không tìm thấy cài đặt'}), 404
 
@@ -886,7 +720,8 @@ def get_setting(settingId):
 
 @app.route('/api/settings/<settingId>', methods=['PUT'])
 def update_setting(settingId):
-    setting = Settings.query.get(settingId)
+    """Cập nhật cài đặt"""
+    setting = dao.get_setting_by_id(settingId)
     if not setting:
         return jsonify({'success': False, 'message': 'Không tìm thấy cài đặt'}), 404
 
@@ -915,15 +750,14 @@ def update_setting(settingId):
     except ValueError:
         return jsonify({'success': False, 'message': 'Giá trị không hợp lệ'}), 400
 
-    setting.value = new_value
-    db.session.commit()
+    dao.update_setting(settingId, new_value)
 
     return jsonify({
         'success': True,
         'message': 'Cập nhật cài đặt thành công',
         'data': {
             'settingId': setting.settingId,
-            'value': setting.value,
+            'value': new_value,
             'description': setting.description
         }
     }), 200
@@ -931,7 +765,8 @@ def update_setting(settingId):
 
 @app.route('/api/settings/service-price/<servicesId>', methods=['PUT'])
 def update_service_price_via_settings(servicesId):
-    service = Service.query.get(servicesId)
+    """Cập nhật giá dịch vụ qua settings"""
+    service = dao.get_service_by_id(servicesId)
     if not service:
         return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
 
@@ -962,10 +797,11 @@ def update_service_price_via_settings(servicesId):
     }), 200
 
 
-# REPORTS
+# REPORTS APIs
 
 @app.route('/api/reports/revenue', methods=['GET'])
 def get_revenue_report():
+    """Báo cáo doanh thu theo tháng"""
     month = request.args.get('month')
     year = request.args.get('year')
 
@@ -978,16 +814,7 @@ def get_revenue_report():
     except:
         return jsonify({'success': False, 'message': 'Tham số month/year không hợp lệ'}), 400
 
-    start_date = datetime(year, month, 1)
-    if month == 12:
-        end_date = datetime(year + 1, 1, 1)
-    else:
-        end_date = datetime(year, month + 1, 1)
-
-    bookings = Booking.query.filter(
-        Booking.time >= start_date,
-        Booking.time < end_date
-    ).all()
+    bookings = dao.get_bookings_by_month(month, year)
 
     total_revenue = 0
     booking_count = len(bookings)
@@ -1010,6 +837,7 @@ def get_revenue_report():
 
 @app.route('/api/reports/service-frequency', methods=['GET'])
 def get_service_frequency_report():
+    """Báo cáo tần suất sử dụng dịch vụ"""
     month = request.args.get('month')
     year = request.args.get('year')
 
@@ -1022,16 +850,7 @@ def get_service_frequency_report():
     except:
         return jsonify({'success': False, 'message': 'Tham số month/year không hợp lệ'}), 400
 
-    start_date = datetime(year, month, 1)
-    if month == 12:
-        end_date = datetime(year + 1, 1, 1)
-    else:
-        end_date = datetime(year, month + 1, 1)
-
-    bookings = Booking.query.filter(
-        Booking.time >= start_date,
-        Booking.time < end_date
-    ).all()
+    bookings = dao.get_bookings_by_month(month, year)
 
     service_frequency = {}
     for booking in bookings:
@@ -1067,5 +886,5 @@ def get_service_frequency_report():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        init_default_settings()
+        dao.init_default_settings()
     app.run(debug=True)
