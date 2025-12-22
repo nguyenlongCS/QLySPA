@@ -1,0 +1,346 @@
+    /* ==================================================
+    ABOUT PAGE – OU SPA
+    ================================================== */
+    .about {
+        width: 100%;
+        overflow: hidden;
+        font-family: 'Roboto', sans-serif;
+        color: #2f2f2f;
+    }
+
+    /* ==================================================
+    SECTION 1 – GIỚI THIỆU ĐẦU TRANG
+    ================================================== */
+    .about-wrapper-text1 {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 80px;
+        align-items: center;         
+        min-height: 90vh;          
+        padding: 0 8%;            
+        background-color: #d8c18ccc;
+        width: 100%;
+    }
+
+
+    .about-text1-title {
+        font-size: 44px;
+        font-weight: 300;
+        line-height: 1;
+        margin-bottom: 30px;
+        font-family: 'Playfair Display', serif;
+        letter-spacing: -2px;
+    }
+
+    .about-content-text1 p {
+        font-size: 16px;
+        line-height: 1.9;
+        color: #434343;
+        margin-bottom: 0px;
+    }
+
+    .about-image-text1 img {
+        width: 100%;
+        border-radius: 0px;
+        object-fit: cover;
+        width: 100%;        
+        height: 600px;      
+        object-fit: cover;
+    }
+
+    /* ==================================================
+    SECTION 2 – VIDEO + KHÔNG GIAN
+    ================================================== */
+    .about-content-text2 p {
+        font-size: 16px;
+        line-height: 1.9;
+        color: #434343;
+        margin-bottom: 0px;
+    }
+    .about-video-text2 {
+        width: 100%;
+        border-radius: 0px;
+        object-fit: cover;
+        display: block;
+        grid-area: video;
+        width: 100%;        
+        height: 650px;
+    }
+    .about-wrapper-text2 {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        grid-template-areas: "video text";
+        gap: 80px;
+        align-items: center;
+        min-height: 100vh;         
+        padding: 0 8%;             
+        background-color: #ffffffcc;
+        width: 100%;
+        padding-top: -80px;
+    }
+
+    .about-text2 {
+        max-width: 720px;
+        margin-bottom: 40px;
+        grid-area: text;
+    }
+
+    .about-text2-title {
+        font-size: 44px;
+        font-weight: 300;
+        line-height: 1;
+        margin-bottom: 30px;
+        font-family: 'Playfair Display', serif;
+        letter-spacing: -2px;
+    }
+
+    .about-content-text2 p {
+        font-size: 16px;
+        line-height: 1.8;
+        color: #555;
+        order: 2;
+    }
+
+    /* ==================================================
+    SECTION 3 – DỊCH VỤ
+    ================================================== */
+    .about-wrapper-text3 {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 80px;
+        align-items: center;         
+        min-height: 90vh;          
+        padding: 0 8%;              
+        background-color: #d8c18ccc;
+        width: 100%;
+    }
+
+    .about-text3-title {
+        font-size: 44px;
+        font-weight: 300;
+        line-height: 1;
+        margin-bottom: 30px;
+        font-family: 'Playfair Display', serif;
+        letter-spacing: -2px;
+    }
+
+    .about-content-text3 p {
+        font-size: 16px;
+        line-height: 1.9;
+        color: #434343;
+        margin-bottom: 0px;
+    }
+
+    .about-image-text3 img {
+        width: 100%;
+        border-radius: 0px;
+        object-fit: cover;
+        width: 100%;        
+        height: 600px;      
+        object-fit: cover;
+    }
+
+    /* ==================================================
+    SECTION 4 – ĐỘI NGŨ NHÂN VIÊN
+    ================================================== */
+    .about-wrapper-text4 {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        grid-template-areas: "image text";
+        gap: 80px;
+        align-items: center;
+        min-height: 100vh;          
+        padding: 0 8%;              
+        background-color: #ffffffcc;
+        width: 100%;
+        padding-top: -80px;
+    }
+
+    .about-text4-title {
+        font-size: 44px;
+        font-weight: 300;
+        line-height: 1;
+        margin-bottom: 30px;
+        font-family: 'Playfair Display', serif;
+        letter-spacing: -2px;
+    }
+
+    .about-content-text4 p {
+        font-size: 16px;
+        line-height: 1.9;
+        color: #434343;
+    }
+
+    .about-image-text4 img {
+        width: 100%;
+        border-radius: 0px;
+        object-fit: cover;
+        width: 100%;        
+        height: 600px;      
+        object-fit: cover;
+        grid-area: image;
+    }
+    .about-text4 {
+        max-width: 720px;
+        margin-bottom: 40px;
+        grid-area: text;
+    }
+    /* ==================================================
+    SECTION 5 – CTA ĐẶT LỊCH
+    ================================================== */
+    .about-wrapper-text5 {
+        position: relative;
+        min-height: 70vh;
+        width: 100%;
+
+        background-image: url("../../images/anh_gioi_thieu_7.jpg");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+
+        display: flex;
+        align-items: flex-start;
+        padding-top: 105px;       
+        padding-left: 8%;
+    }
+
+    .about-image-text5 {
+        display: none;
+    }
+
+    /* BOX TRẮNG MỜ CHỨA NỘI DUNG */
+    .about-text5 {
+        max-width: 600px;
+        padding: 30px 50px;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+
+    /* TIÊU ĐỀ */
+    .about-text5-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 48px;
+        font-weight: 500;
+        line-height: 1.2;
+        color: #2b1e16;
+        margin-bottom: 24px;
+        letter-spacing: -1px;
+    }
+
+    /* NỘI DUNG */
+    .about-content-text5 p {
+        font-size: 16px;
+        line-height: 1.8;
+        color: #4b4b4b;
+        letter-spacing: -0.5px;
+    }
+
+    /* NÚT ĐẶT NGAY */
+    .header-btn-text5 {
+        margin-top: 36px;
+    }
+
+    .btn-primary-text5 {
+        display: inline-block;
+        padding: 14px 34px;
+
+        background: #d2ad63;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 300;
+        letter-spacing: 1px;
+
+        transition: 0.2s ease;
+    }
+
+    .btn-primary-text5:hover {
+        background: #b9964f;
+        color: #000000;
+    }
+
+
+
+    /* ==================================================
+    RESPONSIVE
+    ================================================== */
+    @media (max-width: 992px) {
+        .about-wrapper-text1,
+        .about-wrapper-text3,
+        .about-wrapper-text4,
+        .about-wrapper-text5 {
+            grid-template-columns: 1fr;
+            gap: 40px;
+        }
+
+        .about-text1-title,
+        .about-text2-title,
+        .about-text3-title,
+        .about-text4-title,
+        .about-text5-title {
+            font-size: 30px;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .about-wrapper-text1,
+        .about-wrapper-text2,
+        .about-wrapper-text3,
+        .about-wrapper-text4,
+        .about-wrapper-text5 {
+            padding: 70px 6%;
+        }
+    }
+
+    /* ===============================
+    HEADER – ABOUT PAGE
+    ================================ */
+
+    .about-page header nav {
+        padding: 8px 30px;
+    }
+    .about-page header {
+        background: #eee2ca;
+        position: sticky;
+        top: 0px;
+        z-index: 999;
+        height: 100px;
+    }
+
+    /* Menu chữ đen */
+    .about-page header nav a {
+        color: #222 !important;
+    }
+
+    /* Hover */
+    .about-page header nav a:hover {
+        color: #c8a24a;
+    }
+    /* Gạch chân tinh tế */
+    .about-page header nav a::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -3px;
+        width: 0;                  
+        height: 1px;
+        background: #0e0e0e;         
+        transform: translateX(-50%);
+        transition: width 0.2s ease;
+        pointer-events: none;
+    }
+
+    /* Nút ĐẶT LỊCH */
+    .about-page .btn_primary {
+        background: transparent;
+        color: #222;
+        border: 1px solid #222;
+    }
+
+    .about-page .btn_primary:hover {
+        background: #c8a24a;
+        color: #fff;
+        border-color: #c8a24a;
+    }

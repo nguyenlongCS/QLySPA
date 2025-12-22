@@ -1,0 +1,30 @@
+
+{% extends 'layouts/base.html' %}
+{% block title %}Feedback | OU Spa{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/feedback.css') }}">
+{% endblock %}
+{% block body_class %}feedback-page{% endblock %}
+{% block content %}
+<section>
+<div class="feedback">
+    <div class="feedback-wrapper-text1">
+<div class="feedback-text1">
+    <h1 class="feedback-text1-title">
+    TRÃI NGHIỆM KHÁCH HÀNG</h1> 
+    </div>
+</div>
+
+
+<div class="feedback-wrapper-text2">
+<div class="feedback-text2">
+    <h1 class="feedback-text2-title">
+    REVIEW KHÁCH HÀNG TRÊN GG MAP</h1> 
+    </div>
+</div>
+
+
+</div>
+</section>
+
+{% endblock %}
