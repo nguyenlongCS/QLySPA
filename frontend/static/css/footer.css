@@ -1,0 +1,132 @@
+
+/* ===== FOOTER ===== */
+    .footer {
+        background-color: #ffffff;
+        border-top: 1px solid #eee;
+        padding: 24px 90px 14px 90px;
+        font-family: 'Poppins', sans-serif;
+        color: #333;
+    }
+
+    .footer-content {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        column-gap: 100px;
+        row-gap: 20px;
+        align-items: start;
+    }
+
+/* ===== LEFT ===== */
+.footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.footer_brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: -15px;
+}
+
+.footer_brand h3 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+.footer_local,
+.footer_phone {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.footer_local img,
+.footer_phone img {
+    opacity: 0.7;
+}
+
+/* PAYMENT */
+.footer-payment {
+    display: flex;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.footer-payment img {
+    filter: grayscale(100%);
+    opacity: 0.75;
+    transition: 0.2s ease;
+}
+
+.footer-payment img:hover {
+    filter: grayscale(0%);
+    opacity: 1;
+}
+
+/* ===== RIGHT ===== */
+.footer-right {
+    padding-left: 150px;
+}
+.footer-right h4 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    margin-bottom: 20px;
+}
+
+.footer-links ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-links li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 13px;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.footer-links li img {
+    opacity: 0.75;
+}
+
+.footer-links li:hover {
+    color: #c8a165;
+    transform: translateX(4px);
+}
+
+/* ===== BOTTOM ===== */
+.footer-bottom {
+    grid-column: 1 / -1;
+    border-top: 1px solid #eee;
+    padding-top: 5px;
+    margin-top: 0px;
+    text-align: center;
+}
+
+.footer-bottom p {
+    font-size: 13.5px;
+    color: #777;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .footer {
+        padding: 50px 40px 25px;
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr;
+        column-gap: 0;
+    }
+}

@@ -1,0 +1,101 @@
+
+{% extends 'layouts/base.html' %}
+{% block title %}Giới Thiệu | OU Spa{% endblock %}s
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/about.css') }}">  
+{% endblock %}
+{% block body_class %}about-page{% endblock %}
+{% block content %}
+<div class="about">
+
+    <!-- /*Phần giới thiệu đầu trang*/ -->
+<div class="about-wrapper-text1">
+<div class="about-text1">
+    <h1 class="about-text1-title">
+    Tìm về nhịp nghỉ lý tưởng cùng OU Spa</h1>
+    <div class="about-content-text1">
+    <p>Không quá cầu kỳ, OU Spa chọn sự "vừa vặn" làm kim chỉ nam để mang đến
+    cho bạn cảm giác thư giản trọn vẹn nhất. Việc ghé thăm OU Spa thường xuyên
+    không chỉ một lần chiều chuộn bản thân, mà là hành trình chăm sóc sức khoẻ
+    và sắc đẹp lâu dài.</p>
+    </div>
+</div>
+<div class="about-image-text1">
+    <img src="{{url_for('static',filename ='images/anh_gioi_thieu_8.jpg')}}" alt="about_image_8">
+</div>
+</div>
+
+    <!-- /*Phần giới thiệu thứ 2*/ -->
+<div class="about-wrapper-text2">
+    <div class="about-text2">
+    <h1 class="about-text2-title"> 
+        OU Spa - Không gian tĩnh lặng đậm chất á đông</h1>
+    <div class="about-content-text2">
+        <p>Tại OU - Spa chúng tôi không chỉ kiến tạo một không gian thẩm mỹ mà còn ưu tiên tuyệt
+        đối sự riêng tư của khách hàng. Để mỗi phút giây trị liệu là một khoảng lặng đúng nghĩa,
+        giúp bạn xua tan mọi căng thẳng mệt mỏi.</p>
+    </div>
+    </div>
+    <video class="about-video-text2" autoplay loop muted>
+        <source src="{{ url_for('static', filename='videos/video_text_2.mp4')}}" type="video/mp4">
+    </video>
+    </div>
+    
+
+
+
+    <!-- /*Phần giới thiệu thứ 3*/ -->
+<div class="about-wrapper-text3"><div class="about-text3">
+        <h1 class="about-text3-title">
+         Đa dạng các loại hình dịch vụ <br>
+        - Sản phẩm hữu cơ thuần nhiên được chọn lọc</h1>
+        <div class="about-content-text3">
+    <p>Một chốn trị liệu massage và làm đẹp bền vững giữa lòng Sài Gòn.</p>
+    Tìm về giá trị cân bằng của sức khoẻ và sắc đẹp, OU Spa mang đến đa dạng các loại hình
+    dịch vụ từ chăm sóc da mặt, massage body, trị liệu thư giãn đến các gói chăm sóc toàn diện.
+    Tại OU Spa, kỹ thuật massage điêu luyện là cốt lõi kết hợp với các dược liệu địa phương thuần
+    chất cho đến sản phẩm hữu cơ chuyên nghiệp tiêu chuẩn khắt khe nhất được chọn lọc kỹ lưỡng,
+    với nguồn gốc rõ ràng minh bạch, dựa trên tinh thần làm đẹp và chăm sóc sức khoẻ bền vững.</p>
+        </div>
+    </div>
+    <div class="about-image-text3">
+        <img src="{{url_for('static',filename ='images/anh_gioi_thieu_4.jpg')}}" alt="about_image_3">
+    </div>
+</div>
+
+<!-- /*Phần giới thiệu thứ 4*/ -->
+<div class="about-wrapper-text4">
+    <div class="about-text4">
+        <h1 class="about-text4-title">
+            Đội ngũ nhân viên tận tâm, chuyên nghiệp</h1>
+        <div class="about-content-text4">
+    <p>Các bạn nhân viên Sả được khách thương mến không chỉ vì sự lành nghề,
+    kỹ thuật khéo léo với nhiều năm kinh nghiệm mà còn ở thái độ phục vụ,
+    chu đáo tinh tế nhưng không khách sáo, thân thiện nhưng từ tốn chừng mực
+    Mong mỗi lần khách đến cũng sẽ trân trọng thương quý bàn tay cũng như
+    tấm lòng người chăm sóc cơ thể mình.</p>
+            </div>
+    </div>
+        <div class="about-image-text4">
+        <img src="{{url_for('static',filename ='images/anh_gioi_thieu_3.jpg')}}" alt="about_image_4">
+    </div>
+    </div>
+<div class="about-wrapper-text5">
+    <div class="about-text5">
+        <h1 class="about-text5-title">
+            Chăm sóc bản thân chưa bao giờ dễ dàng đến thế!</h1>
+        <div class="about-content-text5">
+            <p>Cuộc sống bận rộn? Hãy tự thưởng cho mình một buổi spa thư giãn tại OU Spa. Chỉ một bước đặt lịch, bạn sẽ có ngay trải nghiệm tuyệt vời tại OU Spa.</p>
+        </div>
+        <div class="header-btn-text5">
+            <a href="{{ url_for('booking') }}" class="btn-primary-text5">
+                ĐẶT NGAY
+            </a>
+        </div>
+</div>
+<div class="about-image-text5">
+        <img src="{{url_for('static',filename ='images/anh_gioi_thieu_7.jpg')}}" alt="about_image_4">
+    </div>
+</div>
+</div>
+{% endblock %}

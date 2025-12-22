@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="vi">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}">
+
+    <!-- CSS RIÊNG THEO TRANG -->
+    {% block page_css %}{% endblock %}
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}OU Spa{% endblock %}</title>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+
+    {% include 'includes/header.html' %}
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include 'includes/footer.html' %}
+</body>
+<script src="{{ url_for('static', filename='js/contact.js') }}"></script>
+</html>
