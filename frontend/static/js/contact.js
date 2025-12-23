@@ -85,10 +85,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-
+// Chỉ chạy parallax effect nếu element tồn tại
 window.addEventListener("scroll", () => {
     const img = document.querySelector(".contact-image-text1 img");
-    const offset = window.scrollY * 0.3;
-    img.style.transform = `translateY(${offset}px)`;
+    if (img) {
+        const offset = window.scrollY * 0.3;
+        img.style.transform = `translateY(${offset}px)`;
+    }
 });
-

@@ -26,6 +26,14 @@ def contact():
 def booking():
     return render_template('pages/booking.html')
 
+@app.route('/login')
+def login():
+    return render_template('pages/login.html')
+
+@app.route('/register')
+def register():
+    return render_template('pages/register.html')
+
 if __name__ == "__main__":
     app.run(
         host="127.0.0.1",

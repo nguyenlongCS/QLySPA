@@ -12,6 +12,24 @@ from dao import *
 # Tạo Flask app
 app = create_app()
 
+# Cấu hình CORS
+@app.after_request
+def after_request(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+    return response
+
+# Handle OPTIONS requests cho CORS preflight
+@app.route('/api/<path:path>', methods=['OPTIONS'])
+def handle_cors(path):
+    from flask import make_response
+    response = make_response()
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+    return response
+
 
 # AUTHENTICATION APIs
 
