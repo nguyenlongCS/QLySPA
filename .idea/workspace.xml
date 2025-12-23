@@ -6,14 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="86ff86b1-49f1-4524-9c9a-ccd3b3f3ce8e" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/admin.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/index.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/static/css/pages/feedback.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/static/js/feedback.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/templates/includes/header.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/templates/includes/header.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/templates/layouts/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/templates/layouts/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/templates/pages/admin.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/templates/pages/admin.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/templates/pages/feedback.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/decorator.py" beforeDir="false" afterPath="$PROJECT_DIR$/decorator.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/instance/spa_booking.db" beforeDir="false" afterPath="$PROJECT_DIR$/instance/spa_booking.db" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

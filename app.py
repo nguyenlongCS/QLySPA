@@ -1,4 +1,4 @@
-# app.py
+# app_with_flask_admin.py
 from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -6,12 +6,17 @@ import re
 import secrets
 
 from __init__ import create_app, db
-from models import Service, Customer, Employee, Booking
+from models import Service, Customer, Employee, Booking, Account, Settings
 import dao
 from dao import *
+from decorator import admin_required, validate_json, handle_errors, cors_enabled, rate_limit
+from admin import init_admin
 
 # Tạo Flask app
 app = create_app()
+
+# Khởi tạo Flask-Admin
+admin = init_admin(app)
 
 # Cấu hình CORS
 @app.after_request
@@ -20,7 +25,6 @@ def after_request(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
-
 
 # Handle OPTIONS requests cho CORS preflight
 @app.route('/api/<path:path>', methods=['OPTIONS'])
@@ -32,20 +36,15 @@ def handle_cors(path):
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
 
-
 # AUTHENTICATION APIs
 
 @app.route('/api/auth/register', methods=['POST'])
+@validate_json(['username', 'password', 'name', 'phone'])
+@handle_errors
+@rate_limit(max_requests=10, per_minutes=1)
 def register():
     """Đăng ký tài khoản mới"""
     data = request.get_json()
-
-    # Validate dữ liệu đầu vào
-    if not data.get('username') or not data.get('password'):
-        return jsonify({'success': False, 'message': 'Thiếu username hoặc password'}), 400
-
-    if not data.get('name') or not data.get('phone'):
-        return jsonify({'success': False, 'message': 'Thiếu thông tin name hoặc phone'}), 400
 
     # Validate phone: chỉ cho phép số, 9–11 chữ số
     phone = data['phone']
@@ -96,15 +95,13 @@ def register():
         }
     }), 201
 
-
 @app.route('/api/auth/login', methods=['POST'])
+@validate_json(['username', 'password'])
+@handle_errors
+@rate_limit(max_requests=20, per_minutes=1)
 def login():
     """Đăng nhập"""
     data = request.get_json()
-
-    # Validate dữ liệu đầu vào
-    if not data.get('username') or not data.get('password'):
-        return jsonify({'success': False, 'message': 'Thiếu username hoặc password'}), 400
 
     # Tìm tài khoản theo username
     account = dao.get_account_by_username(data['username'])
@@ -144,15 +141,12 @@ def login():
         'data': user_info
     }), 200
 
-
 @app.route('/api/auth/change-password', methods=['PUT'])
+@validate_json(['username', 'oldPassword', 'newPassword'])
+@handle_errors
 def change_password():
     """Đổi mật khẩu"""
     data = request.get_json()
-
-    # Validate dữ liệu đầu vào
-    if not data.get('username') or not data.get('oldPassword') or not data.get('newPassword'):
-        return jsonify({'success': False, 'message': 'Thiếu thông tin'}), 400
 
     # Kiểm tra độ dài password mới
     if len(data['newPassword']) < 6:
@@ -177,8 +171,8 @@ def change_password():
         'message': 'Đổi mật khẩu thành công'
     }), 200
 
-
 @app.route('/api/auth/profile', methods=['GET'])
+@handle_errors
 def get_profile():
     """Lấy thông tin profile"""
     username = request.args.get('username')
@@ -217,28 +211,18 @@ def get_profile():
         'data': profile
     }), 200
 
-
 @app.route('/api/auth/change-role', methods=['PUT'])
+@admin_required
+@validate_json(['username', 'newRole'])
+@handle_errors
 def change_role():
     """Đổi role tài khoản - chỉ admin"""
     data = request.get_json()
-
-    # Validate dữ liệu đầu vào
-    if not data.get('username') or not data.get('newRole'):
-        return jsonify({'success': False, 'message': 'Thiếu username hoặc newRole'}), 400
 
     # Validate role hợp lệ
     valid_roles = ['Customer', 'Employee', 'Admin', 'Cashier']
     if data['newRole'] not in valid_roles:
         return jsonify({'success': False, 'message': 'Role không hợp lệ'}), 400
-
-    # Kiểm tra quyền admin
-    if not data.get('adminUsername'):
-        return jsonify({'success': False, 'message': 'Thiếu thông tin admin'}), 400
-
-    admin_account = dao.get_account_by_username(data['adminUsername'])
-    if not admin_account or admin_account.role != 'Admin':
-        return jsonify({'success': False, 'message': 'Không có quyền thực hiện'}), 403
 
     # Tìm tài khoản cần đổi role
     target_account = dao.get_account_by_username(data['username'])
@@ -264,8 +248,8 @@ def change_role():
             'employeeId': dao.generate_employee_id(),
             'name': customer_name,
             'role': 'Nhân viên',
-            'phone': customer_phone,  # THÊM PHONE
-            'email': customer_email  # THÊM EMAIL
+            'phone': customer_phone,
+            'email': customer_email
         }
         employee = dao.create_employee(employee_data)
 
@@ -329,8 +313,8 @@ def change_role():
             'employeeId': dao.generate_employee_id(),
             'name': data.get('name', data['username']),
             'role': 'Nhân viên',
-            'phone': data.get('phone', ''),  # THÊM PHONE
-            'email': data.get('email', '')  # THÊM EMAIL
+            'phone': data.get('phone', ''),
+            'email': data.get('email', '')
         }
         employee = dao.create_employee(employee_data)
         target_account.employeeId = employee.employeeId
@@ -424,19 +408,11 @@ def change_role():
         }
     }), 200
 
-
 @app.route('/api/auth/accounts', methods=['GET'])
+@admin_required
+@handle_errors
 def get_all_accounts():
     """Lấy danh sách tất cả tài khoản - chỉ admin"""
-    admin_username = request.args.get('adminUsername')
-
-    if not admin_username:
-        return jsonify({'success': False, 'message': 'Thiếu thông tin admin'}), 400
-
-    admin_account = dao.get_account_by_username(admin_username)
-    if not admin_account or admin_account.role != 'Admin':
-        return jsonify({'success': False, 'message': 'Không có quyền truy cập'}), 403
-
     try:
         accounts = dao.get_all_accounts()
         data = []
@@ -456,11 +432,10 @@ def get_all_accounts():
                 account_info['email'] = acc.customer.email
             elif acc.role == 'Employee' and acc.employee:
                 account_info['name'] = acc.employee.name
-                account_info['phone'] = acc.employee.phone or ''  # THÊM PHONE
-                account_info['email'] = acc.employee.email or ''  # THÊM EMAIL
+                account_info['phone'] = acc.employee.phone or ''
+                account_info['email'] = acc.employee.email or ''
                 account_info['employeeRole'] = acc.employee.role
             else:
-                # Admin hoặc không có record liên kết
                 account_info['name'] = acc.username
                 account_info['phone'] = ''
                 account_info['email'] = ''
@@ -472,18 +447,18 @@ def get_all_accounts():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'}), 500
 
-
 # CUSTOMER APIs
 
 @app.route('/api/customers', methods=['POST'])
+@handle_errors
 def create_customer():
     """Tạo khách hàng mới"""
     data = request.get_json()
     dao.create_customer(data)
     return jsonify({'success': True, 'message': "Tạo khách hàng thành công"}), 201
 
-
 @app.route('/api/customers', methods=['GET'])
+@handle_errors
 def get_customers():
     """Lấy danh sách khách hàng"""
     customers = dao.get_all_customers()
@@ -495,8 +470,8 @@ def get_customers():
     } for c in customers]
     return jsonify({'success': True, 'data': data}), 200
 
-
 @app.route('/api/customers/<customerId>', methods=['GET'])
+@handle_errors
 def get_customer(customerId):
     """Lấy thông tin khách hàng theo ID"""
     customer = dao.get_customer_by_id(customerId)
@@ -512,8 +487,8 @@ def get_customer(customerId):
         }
     }), 200
 
-
 @app.route('/api/customers/<customerId>', methods=['PUT'])
+@handle_errors
 def update_customer(customerId):
     """Cập nhật thông tin khách hàng"""
     customer = dao.get_customer_by_id(customerId)
@@ -525,9 +500,9 @@ def update_customer(customerId):
 
     return jsonify({'success': True, 'message': 'Cập nhật khách hàng thành công'}), 200
 
-
 @app.route('/api/customers/<customerId>', methods=['DELETE'])
-def delete_customer(customerId):
+@handle_errors
+def delete_customer_api(customerId):
     """Xóa khách hàng"""
     customer = dao.get_customer_by_id(customerId)
     if not customer:
@@ -539,18 +514,18 @@ def delete_customer(customerId):
     dao.delete_customer(customerId)
     return jsonify({'success': True, 'message': 'Xóa khách hàng thành công'}), 200
 
-
 # EMPLOYEE APIs
 
 @app.route('/api/employees', methods=['POST'])
+@handle_errors
 def create_employee():
     """Tạo nhân viên mới"""
     data = request.get_json()
     dao.create_employee(data)
     return jsonify({'success': True, 'message': "Tạo nhân viên thành công"}), 201
 
-
 @app.route('/api/employees', methods=['GET'])
+@handle_errors
 def get_employees():
     """Lấy danh sách nhân viên"""
     employees = dao.get_all_employees()
@@ -558,13 +533,13 @@ def get_employees():
         'employeeId': e.employeeId,
         'name': e.name,
         'role': e.role,
-        'phone': e.phone or '',  # THÊM PHONE
-        'email': e.email or ''  # THÊM EMAIL
+        'phone': e.phone or '',
+        'email': e.email or ''
     } for e in employees]
     return jsonify({'success': True, 'data': data}), 200
 
-
 @app.route('/api/employees/<employeeId>', methods=['GET'])
+@handle_errors
 def get_employee(employeeId):
     """Lấy thông tin nhân viên theo ID"""
     employee = dao.get_employee_by_id(employeeId)
@@ -574,12 +549,12 @@ def get_employee(employeeId):
         'employeeId': employee.employeeId,
         'name': employee.name,
         'role': employee.role,
-        'phone': employee.phone or '',  # THÊM PHONE
-        'email': employee.email or ''  # THÊM EMAIL
+        'phone': employee.phone or '',
+        'email': employee.email or ''
     }}), 200
 
-
 @app.route('/api/employees/<employeeId>', methods=['PUT'])
+@handle_errors
 def update_employee(employeeId):
     """Cập nhật thông tin nhân viên"""
     employee = dao.get_employee_by_id(employeeId)
@@ -591,9 +566,9 @@ def update_employee(employeeId):
 
     return jsonify({'success': True, 'message': 'Cập nhật nhân viên thành công'}), 200
 
-
 @app.route('/api/employees/<employeeId>', methods=['DELETE'])
-def delete_employee(employeeId):
+@handle_errors
+def delete_employee_api(employeeId):
     """Xóa nhân viên"""
     employee = dao.get_employee_by_id(employeeId)
     if not employee:
@@ -605,8 +580,14 @@ def delete_employee(employeeId):
     dao.delete_employee(employeeId)
     return jsonify({'success': True, 'message': 'Xóa nhân viên thành công'}), 200
 
-
 # SERVICE APIs
+
+@app.route('/api/services/generate-id', methods=['GET'])
+@cors_enabled
+def generate_service_id():
+    """Tạo mã dịch vụ tự động"""
+    service_id = 'SV' + secrets.token_hex(4).upper()
+    return jsonify({'success': True, 'servicesId': service_id}), 200
 
 @app.route('/api/services/form', methods=['GET'])
 def get_service_form():
@@ -625,21 +606,15 @@ def get_service_form():
         }
     }), 200
 
-
-@app.route('/api/services/generate-id', methods=['GET'])
-def generate_service_id():
-    """Tạo mã dịch vụ tự động theo format SVXXXXXXXX"""
-    service_id = 'SV' + secrets.token_hex(4).upper()
-    return jsonify({'success': True, 'servicesId': service_id}), 200
-
-
-# Cập nhật API create_service để sử dụng mã tự động khi không có servicesId
 @app.route('/api/services/submit', methods=['POST'])
+@validate_json(['name', 'durration', 'price'])
+@handle_errors
+@cors_enabled
 def create_service():
-    """Tạo dịch vụ mới với mã tự động nếu không có"""
+    """Tạo dịch vụ mới"""
     data = request.get_json()
 
-    # Tạo mã tự động nếu không có
+    # Tạo mã dịch vụ tự động nếu không có
     if not data.get('servicesId'):
         data['servicesId'] = 'SV' + secrets.token_hex(4).upper()
 
@@ -653,8 +628,9 @@ def create_service():
     dao.create_service(data)
     return jsonify({'success': True, 'message': "Tạo dịch vụ thành công"}), 201
 
-
 @app.route('/api/services', methods=['GET'])
+@cors_enabled
+@handle_errors
 def get_services():
     """Lấy danh sách dịch vụ"""
     services = dao.get_all_services()
@@ -667,8 +643,8 @@ def get_services():
     } for s in services]
     return jsonify({'success': True, 'data': data}), 200
 
-
 @app.route('/api/services/<servicesId>', methods=['GET'])
+@handle_errors
 def get_service(servicesId):
     """Lấy thông tin dịch vụ theo ID"""
     service = dao.get_service_by_id(servicesId)
@@ -682,8 +658,8 @@ def get_service(servicesId):
         'note': service.note
     }}), 200
 
-
 @app.route('/api/services/<servicesId>', methods=['PUT'])
+@handle_errors
 def update_service(servicesId):
     """Cập nhật thông tin dịch vụ"""
     service = dao.get_service_by_id(servicesId)
@@ -699,8 +675,8 @@ def update_service(servicesId):
     dao.update_service(servicesId, data)
     return jsonify({'success': True, 'message': 'Cập nhật dịch vụ thành công'}), 200
 
-
 @app.route('/api/services/<servicesId>', methods=['DELETE'])
+@handle_errors
 def delete_service(servicesId):
     """Xóa dịch vụ"""
     service = dao.get_service_by_id(servicesId)
@@ -713,10 +689,10 @@ def delete_service(servicesId):
     dao.delete_service(servicesId)
     return jsonify({'success': True, 'message': 'Xóa dịch vụ thành công'}), 200
 
-
 # BOOKING APIs
 
 @app.route('/api/bookings', methods=['POST'])
+@handle_errors
 def create_booking():
     """Tạo booking mới"""
     data = request.get_json()
@@ -749,8 +725,8 @@ def create_booking():
     dao.create_booking(data)
     return jsonify({'success': True, 'message': "Tạo lịch thành công"}), 201
 
-
 @app.route('/api/bookings', methods=['GET'])
+@handle_errors
 def get_bookings():
     """Lấy danh sách booking"""
     bookings = dao.get_all_bookings()
@@ -766,8 +742,8 @@ def get_bookings():
         })
     return jsonify({'success': True, 'data': data}), 200
 
-
 @app.route('/api/bookings/<bookingId>', methods=['GET'])
+@handle_errors
 def get_booking(bookingId):
     """Lấy thông tin booking theo ID"""
     b = dao.get_booking_by_id(bookingId)
@@ -783,8 +759,8 @@ def get_booking(bookingId):
         'employee': {'employeeId': b.employeeId, 'name': b.employee.name}
     }}), 200
 
-
 @app.route('/api/bookings/<bookingId>', methods=['PUT'])
+@handle_errors
 def update_booking(bookingId):
     """Cập nhật booking"""
     booking = dao.get_booking_by_id(bookingId)
@@ -795,8 +771,8 @@ def update_booking(bookingId):
     dao.update_booking(bookingId, data)
     return jsonify({'success': True, 'message': "Cập nhật lịch thành công"}), 200
 
-
 @app.route('/api/bookings/<bookingId>', methods=['DELETE'])
+@handle_errors
 def delete_booking(bookingId):
     """Xóa booking"""
     booking = dao.get_booking_by_id(bookingId)
@@ -806,10 +782,10 @@ def delete_booking(bookingId):
     dao.delete_booking(bookingId)
     return jsonify({'success': True, 'message': "Xóa lịch thành công"}), 200
 
-
 # INVOICE APIs
 
 @app.route('/api/invoices', methods=['POST'])
+@handle_errors
 def create_invoice():
     """Tạo hóa đơn thanh toán cho booking"""
     data = request.get_json()
@@ -867,8 +843,8 @@ def create_invoice():
         }
     }), 201
 
-
 @app.route('/api/invoices', methods=['GET'])
+@handle_errors
 def get_invoices():
     """Lấy danh sách hóa đơn"""
     invoices = dao.get_all_invoices()
@@ -890,8 +866,8 @@ def get_invoices():
 
     return jsonify({'success': True, 'data': data}), 200
 
-
 @app.route('/api/invoices/<invoiceId>', methods=['GET'])
+@handle_errors
 def get_invoice(invoiceId):
     """Lấy thông tin hóa đơn theo ID"""
     invoice = dao.get_invoice_by_id(invoiceId)
@@ -918,8 +894,8 @@ def get_invoice(invoiceId):
         }
     }), 200
 
-
 @app.route('/api/invoices/<invoiceId>', methods=['PUT'])
+@handle_errors
 def update_invoice(invoiceId):
     """Cập nhật hóa đơn"""
     invoice = dao.get_invoice_by_id(invoiceId)
@@ -965,8 +941,8 @@ def update_invoice(invoiceId):
         }
     }), 200
 
-
 @app.route('/api/invoices/<invoiceId>', methods=['DELETE'])
+@handle_errors
 def delete_invoice(invoiceId):
     """Xóa hóa đơn"""
     invoice = dao.get_invoice_by_id(invoiceId)
@@ -976,10 +952,10 @@ def delete_invoice(invoiceId):
     dao.delete_invoice(invoiceId)
     return jsonify({'success': True, 'message': 'Xóa hóa đơn thành công'}), 200
 
-
 # SETTINGS APIs
 
 @app.route('/api/settings', methods=['GET'])
+@handle_errors
 def get_all_settings():
     """Lấy tất cả cài đặt"""
     settings = dao.get_all_settings()
@@ -991,8 +967,8 @@ def get_all_settings():
 
     return jsonify({'success': True, 'data': data}), 200
 
-
 @app.route('/api/settings/<settingId>', methods=['GET'])
+@handle_errors
 def get_setting(settingId):
     """Lấy cài đặt theo ID"""
     setting = dao.get_setting_by_id(settingId)
@@ -1008,8 +984,8 @@ def get_setting(settingId):
         }
     }), 200
 
-
 @app.route('/api/settings/<settingId>', methods=['PUT'])
+@handle_errors
 def update_setting(settingId):
     """Cập nhật cài đặt"""
     setting = dao.get_setting_by_id(settingId)
@@ -1053,8 +1029,8 @@ def update_setting(settingId):
         }
     }), 200
 
-
 @app.route('/api/settings/service-price/<servicesId>', methods=['PUT'])
+@handle_errors
 def update_service_price_via_settings(servicesId):
     """Cập nhật giá dịch vụ qua settings"""
     service = dao.get_service_by_id(servicesId)
@@ -1087,10 +1063,10 @@ def update_service_price_via_settings(servicesId):
         }
     }), 200
 
-
 # REPORTS APIs
 
 @app.route('/api/reports/daily-revenue', methods=['GET'])
+@handle_errors
 def get_daily_revenue_report():
     """Báo cáo doanh thu theo ngày trong tháng"""
     month = request.args.get('month')
@@ -1144,8 +1120,8 @@ def get_daily_revenue_report():
         }
     }), 200
 
-
 @app.route('/api/reports/service-frequency', methods=['GET'])
+@handle_errors
 def get_service_frequency_report():
     """Báo cáo tần suất sử dụng dịch vụ theo tháng"""
     month = request.args.get('month')
@@ -1196,8 +1172,13 @@ def get_service_frequency_report():
         }
     }), 200
 
-
-# RUN APP
+# Route để redirect đến Flask-Admin
+@app.route('/admin')
+def redirect_to_admin():
+    """Redirect đến Flask-Admin interface"""
+    from flask import redirect
+    admin_user = request.args.get('user', 'admin')
+    return redirect(f'/admin/?admin={admin_user}')
 
 if __name__ == '__main__':
     with app.app_context():
