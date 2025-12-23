@@ -20,6 +20,15 @@
     </main>
 
     {% include 'includes/footer.html' %}
+
+    <!-- Chỉ load contact.js nếu đang ở trang contact -->
+    {% if request.endpoint == 'contact' %}
+    <script src="{{ url_for('static', filename='js/contact.js') }}"></script>
+    {% endif %}
+
+    <!-- Chỉ load feedback.js nếu đang ở trang feedback -->
+    {% if request.endpoint == 'feedback' %}
+    <script src="{{ url_for('static', filename='js/feedback.js') }}"></script>
+    {% endif %}
 </body>
-<script src="{{ url_for('static', filename='js/contact.js') }}"></script>
 </html>

@@ -1,0 +1,432 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Đăng Ký | OU Spa{% endblock %}
+
+{% block page_css %}
+<style>
+/* Header style cho register page - giống about/contact/feedback */
+.register-page header nav {
+    padding: 8px 30px;
+}
+.register-page header {
+    background: #eee2ca;
+    position: sticky;
+    top: 0px;
+    z-index: 999;
+    height: 100px;
+}
+
+/* Menu chữ đen */
+.register-page header nav a {
+    color: #222 !important;
+}
+
+/* Hover */
+.register-page header nav a:hover {
+    color: #c8a24a;
+}
+
+/* Gạch chân tinh tế */
+.register-page header nav a::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 0;
+    height: 1px;
+    background: #0e0e0e;
+    transform: translateX(-50%);
+    transition: width 0.2s ease;
+    pointer-events: none;
+}
+
+/* Nút ĐẶT LỊCH và các nút khác */
+.register-page .btn-primary {
+    background: transparent;
+    color: #222;
+    border: 1px solid #222;
+}
+
+.register-page .btn-primary:hover {
+    background: #c8a24a;
+    color: #fff;
+    border-color: #c8a24a;
+}
+
+.auth-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 40px 20px;
+}
+
+.auth-box {
+    background: white;
+    padding: 50px;
+    border-radius: 10px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 550px;
+}
+
+.auth-box h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.auth-box p {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #c8a165;
+    box-shadow: 0 0 0 3px rgba(200, 161, 101, 0.1);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.btn-auth {
+    width: 100%;
+    padding: 15px;
+    background: #c8a165;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-bottom: 20px;
+}
+
+.btn-auth:hover {
+    background: #b8944f;
+}
+
+.btn-auth:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.auth-links {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.auth-links a {
+    color: #c8a165;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-links a:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    color: #e53935;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-message {
+    background: #fff3cd;
+    color: #856404;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #ffeaa7;
+}
+
+.password-requirements {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.password-requirements ul {
+    margin: 5px 0 0 15px;
+    padding: 0;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-box {
+        padding: 30px 20px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block body_class %}register-page{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h1>Đăng Ký</h1>
+        <p>Tạo tài khoản để sử dụng dịch vụ spa tại OU Spa</p>
+
+        <div id="success-message" class="success-message" style="display: none;"></div>
+        <div id="alert-message" class="alert-message" style="display: none;"></div>
+
+        <form id="registerForm">
+            <div class="form-group">
+                <label for="name">Họ và tên *</label>
+                <input type="text" id="name" name="name" required placeholder="Nhập họ và tên đầy đủ">
+                <div class="error-message" id="name-error"></div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="phone">Số điện thoại *</label>
+                    <input type="tel" id="phone" name="phone" required placeholder="Số điện thoại" pattern="[0-9]{9,11}">
+                    <div class="error-message" id="phone-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Email (không bắt buộc)">
+                    <div class="error-message" id="email-error"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="username">Tên đăng nhập *</label>
+                <input type="text" id="username" name="username" required placeholder="Chọn tên đăng nhập">
+                <div class="error-message" id="username-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mật khẩu *</label>
+                <input type="password" id="password" name="password" required placeholder="Tạo mật khẩu">
+                <div class="error-message" id="password-error"></div>
+                <div class="password-requirements">
+                    <strong>Yêu cầu mật khẩu:</strong>
+                    <ul>
+                        <li>Tối thiểu 6 ký tự</li>
+                        <li>Nên bao gồm chữ cái và số</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Xác nhận mật khẩu *</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Nhập lại mật khẩu">
+                <div class="error-message" id="confirm-password-error"></div>
+            </div>
+
+            <button type="submit" id="registerBtn" class="btn-auth">ĐĂNG KÝ</button>
+        </form>
+
+        <div class="auth-links">
+            <p>Đã có tài khoản? <a href="{{ url_for('login') }}">Đăng nhập ngay</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
+
+// Chỉ cho phép nhập số cho phone
+document.getElementById('phone').addEventListener('input', function(e) {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+});
+
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Reset messages
+    clearMessages();
+    clearErrors();
+
+    // Validate form
+    if (!validateForm()) {
+        return;
+    }
+
+    const registerBtn = document.getElementById('registerBtn');
+    registerBtn.disabled = true;
+    registerBtn.textContent = 'Đang đăng ký...';
+
+    try {
+        const formData = {
+            name: document.getElementById('name').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value
+        };
+
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccess('Đăng ký thành công! Đang chuyển đến trang đăng nhập...');
+
+            // Clear form
+            document.getElementById('registerForm').reset();
+
+            // Chuyển đến trang đăng nhập sau 2 giây
+            setTimeout(() => {
+                window.location.href = '{{ url_for("login") }}';
+            }, 2000);
+
+        } else {
+            showAlert(result.message || 'Đăng ký thất bại');
+        }
+
+    } catch (error) {
+        console.error('Lỗi đăng ký:', error);
+        showAlert('Có lỗi xảy ra khi đăng ký. Vui lòng thử lại.');
+    } finally {
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'ĐĂNG KÝ';
+    }
+});
+
+function validateForm() {
+    let isValid = true;
+
+    // Validate name
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+        showError('name-error', 'Vui lòng nhập họ và tên');
+        isValid = false;
+    } else if (name.length < 2) {
+        showError('name-error', 'Họ và tên phải có ít nhất 2 ký tự');
+        isValid = false;
+    }
+
+    // Validate phone
+    const phone = document.getElementById('phone').value.trim();
+    if (!phone) {
+        showError('phone-error', 'Vui lòng nhập số điện thoại');
+        isValid = false;
+    } else if (!/^\d{9,11}$/.test(phone)) {
+        showError('phone-error', 'Số điện thoại phải có 9-11 chữ số');
+        isValid = false;
+    }
+
+    // Validate username
+    const username = document.getElementById('username').value.trim();
+    if (!username) {
+        showError('username-error', 'Vui lòng nhập tên đăng nhập');
+        isValid = false;
+    } else if (username.length < 3) {
+        showError('username-error', 'Tên đăng nhập phải có ít nhất 3 ký tự');
+        isValid = false;
+    } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        showError('username-error', 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới');
+        isValid = false;
+    }
+
+    // Validate password
+    const password = document.getElementById('password').value;
+    if (!password) {
+        showError('password-error', 'Vui lòng nhập mật khẩu');
+        isValid = false;
+    } else if (password.length < 6) {
+        showError('password-error', 'Mật khẩu phải có ít nhất 6 ký tự');
+        isValid = false;
+    }
+
+    // Validate confirm password
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    if (!confirmPassword) {
+        showError('confirm-password-error', 'Vui lòng xác nhận mật khẩu');
+        isValid = false;
+    } else if (password !== confirmPassword) {
+        showError('confirm-password-error', 'Mật khẩu xác nhận không khớp');
+        isValid = false;
+    }
+
+    return isValid;
+}
+
+function showError(elementId, message) {
+    document.getElementById(elementId).textContent = message;
+}
+
+function clearErrors() {
+    const errorElements = document.querySelectorAll('.error-message');
+    errorElements.forEach(el => el.textContent = '');
+}
+
+function showSuccess(message) {
+    const successEl = document.getElementById('success-message');
+    successEl.textContent = message;
+    successEl.style.display = 'block';
+}
+
+function showAlert(message) {
+    const alertEl = document.getElementById('alert-message');
+    alertEl.textContent = message;
+    alertEl.style.display = 'block';
+}
+
+function clearMessages() {
+    document.getElementById('success-message').style.display = 'none';
+    document.getElementById('alert-message').style.display = 'none';
+}
+
+// Kiểm tra nếu đã đăng nhập thì chuyển hướng
+if (localStorage.getItem('isLoggedIn') === 'true') {
+    window.location.href = '/';
+}
+</script>
+{% endblock %}

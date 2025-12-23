@@ -1,0 +1,329 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Đăng Nhập | OU Spa{% endblock %}
+
+{% block page_css %}
+<style>
+/* Header style cho login page - giống about/contact/feedback */
+.login-page header nav {
+    padding: 8px 30px;
+}
+.login-page header {
+    background: #eee2ca;
+    position: sticky;
+    top: 0px;
+    z-index: 999;
+    height: 100px;
+}
+
+/* Menu chữ đen */
+.login-page header nav a {
+    color: #222 !important;
+}
+
+/* Hover */
+.login-page header nav a:hover {
+    color: #c8a24a;
+}
+
+/* Gạch chân tinh tế */
+.login-page header nav a::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 0;
+    height: 1px;
+    background: #0e0e0e;
+    transform: translateX(-50%);
+    transition: width 0.2s ease;
+    pointer-events: none;
+}
+
+/* Nút ĐẶT LỊCH và các nút khác */
+.login-page .btn-primary {
+    background: transparent;
+    color: #222;
+    border: 1px solid #222;
+}
+
+.login-page .btn-primary:hover {
+    background: #c8a24a;
+    color: #fff;
+    border-color: #c8a24a;
+}
+
+.auth-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 40px 20px;
+}
+
+.auth-box {
+    background: white;
+    padding: 50px;
+    border-radius: 10px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 450px;
+}
+
+.auth-box h1 {
+    text-align: center;
+    margin-bottom: 10px;
+    color: #333;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.auth-box p {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #c8a165;
+    box-shadow: 0 0 0 3px rgba(200, 161, 101, 0.1);
+}
+
+.btn-auth {
+    width: 100%;
+    padding: 15px;
+    background: #c8a165;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-bottom: 20px;
+}
+
+.btn-auth:hover {
+    background: #b8944f;
+}
+
+.btn-auth:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.auth-links {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.auth-links a {
+    color: #c8a165;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-links a:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    color: #e53935;
+    font-size: 13px;
+    margin-top: 5px;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-message {
+    background: #fff3cd;
+    color: #856404;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #ffeaa7;
+}
+
+@media (max-width: 576px) {
+    .auth-box {
+        padding: 30px 20px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h1>Đăng Nhập</h1>
+        <p>Đăng nhập để đặt lịch spa tại OU Spa</p>
+
+        <div id="success-message" class="success-message" style="display: none;"></div>
+        <div id="alert-message" class="alert-message" style="display: none;"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Tên đăng nhập *</label>
+                <input type="text" id="username" name="username" required placeholder="Nhập tên đăng nhập">
+                <div class="error-message" id="username-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mật khẩu *</label>
+                <input type="password" id="password" name="password" required placeholder="Nhập mật khẩu">
+                <div class="error-message" id="password-error"></div>
+            </div>
+
+            <button type="submit" id="loginBtn" class="btn-auth">ĐĂNG NHẬP</button>
+        </form>
+
+        <div class="auth-links">
+            <p>Chưa có tài khoản? <a href="{{ url_for('register') }}">Đăng ký ngay</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Reset messages
+    clearMessages();
+    clearErrors();
+
+    // Validate form
+    if (!validateForm()) {
+        return;
+    }
+
+    const loginBtn = document.getElementById('loginBtn');
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Đang đăng nhập...';
+
+    try {
+        const formData = {
+            username: document.getElementById('username').value.trim(),
+            password: document.getElementById('password').value
+        };
+
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Lưu thông tin đăng nhập
+            localStorage.setItem('userInfo', JSON.stringify(result.data));
+            localStorage.setItem('isLoggedIn', 'true');
+
+            showSuccess('Đăng nhập thành công! Đang chuyển hướng...');
+
+            // Chuyển hướng sau 1.5 giây
+            setTimeout(() => {
+                const returnUrl = new URLSearchParams(window.location.search).get('return') || '/';
+                window.location.href = returnUrl;
+            }, 1500);
+
+        } else {
+            showAlert(result.message || 'Đăng nhập thất bại');
+        }
+
+    } catch (error) {
+        console.error('Lỗi đăng nhập:', error);
+        showAlert('Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại.');
+    } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'ĐĂNG NHẬP';
+    }
+});
+
+function validateForm() {
+    let isValid = true;
+
+    const username = document.getElementById('username').value.trim();
+    if (!username) {
+        showError('username-error', 'Vui lòng nhập tên đăng nhập');
+        isValid = false;
+    }
+
+    const password = document.getElementById('password').value;
+    if (!password) {
+        showError('password-error', 'Vui lòng nhập mật khẩu');
+        isValid = false;
+    }
+
+    return isValid;
+}
+
+function showError(elementId, message) {
+    document.getElementById(elementId).textContent = message;
+}
+
+function clearErrors() {
+    const errorElements = document.querySelectorAll('.error-message');
+    errorElements.forEach(el => el.textContent = '');
+}
+
+function showSuccess(message) {
+    const successEl = document.getElementById('success-message');
+    successEl.textContent = message;
+    successEl.style.display = 'block';
+}
+
+function showAlert(message) {
+    const alertEl = document.getElementById('alert-message');
+    alertEl.textContent = message;
+    alertEl.style.display = 'block';
+}
+
+function clearMessages() {
+    document.getElementById('success-message').style.display = 'none';
+    document.getElementById('alert-message').style.display = 'none';
+}
+
+// Kiểm tra nếu đã đăng nhập thì chuyển hướng
+if (localStorage.getItem('isLoggedIn') === 'true') {
+    const returnUrl = new URLSearchParams(window.location.search).get('return') || '/';
+    window.location.href = returnUrl;
+}
+</script>
+{% endblock %}
