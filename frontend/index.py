@@ -14,9 +14,9 @@ def about():
 def services():
     return render_template('pages/services.html')
 
-@app.route('/feedback')
-def feedback():
-    return render_template('pages/feedback.html')
+# @app.route('/feedback')
+# def feedback():
+#     return render_template('pages/feedback.html')
 
 @app.route('/contact')
 def contact():

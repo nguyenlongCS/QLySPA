@@ -3,6 +3,7 @@ from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import re
+import secrets
 
 from __init__ import create_app, db
 from models import Service, Customer, Employee, Booking
@@ -625,10 +626,22 @@ def get_service_form():
     }), 200
 
 
+@app.route('/api/services/generate-id', methods=['GET'])
+def generate_service_id():
+    """Tạo mã dịch vụ tự động theo format SVXXXXXXXX"""
+    service_id = 'SV' + secrets.token_hex(4).upper()
+    return jsonify({'success': True, 'servicesId': service_id}), 200
+
+
+# Cập nhật API create_service để sử dụng mã tự động khi không có servicesId
 @app.route('/api/services/submit', methods=['POST'])
 def create_service():
-    """Tạo dịch vụ mới"""
+    """Tạo dịch vụ mới với mã tự động nếu không có"""
     data = request.get_json()
+
+    # Tạo mã tự động nếu không có
+    if not data.get('servicesId'):
+        data['servicesId'] = 'SV' + secrets.token_hex(4).upper()
 
     if dao.get_service_by_id(data['servicesId']):
         return jsonify({'success': False, 'message': 'Mã dịch vụ đã tồn tại'}), 400
