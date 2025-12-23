@@ -589,23 +589,6 @@ def generate_service_id():
     service_id = 'SV' + secrets.token_hex(4).upper()
     return jsonify({'success': True, 'servicesId': service_id}), 200
 
-@app.route('/api/services/form', methods=['GET'])
-def get_service_form():
-    """Lấy form dịch vụ"""
-    return jsonify({
-        'success': True,
-        'form': {
-            'title': 'Phiếu Dịch Vụ',
-            'fields': [
-                {'name': 'servicesId', 'type': 'text', 'required': True},
-                {'name': 'name', 'type': 'text', 'required': True},
-                {'name': 'durration', 'type': 'number', 'min': 15, 'max': 120},
-                {'name': 'price', 'type': 'number', 'min': 0, 'required': True},
-                {'name': 'note', 'type': 'textarea', 'required': False}
-            ]
-        }
-    }), 200
-
 @app.route('/api/services/submit', methods=['POST'])
 @validate_json(['name', 'durration', 'price'])
 @handle_errors
@@ -1171,6 +1154,168 @@ def get_service_frequency_report():
             'total_count': total_count
         }
     }), 200
+
+# SERVICE FORMS APIs
+
+@app.route('/api/service-forms', methods=['POST'])
+@validate_json(['bookingId', 'employeeId', 'serviceName', 'serviceDuration', 'servicePrice'])
+@handle_errors
+@cors_enabled
+def create_service_form():
+    """Tạo phiếu dịch vụ mới"""
+    data = request.get_json()
+
+    # Kiểm tra booking tồn tại
+    booking = dao.get_booking_by_id(data['bookingId'])
+    if not booking:
+        return jsonify({'success': False, 'message': 'Booking không tồn tại'}), 404
+
+    # Kiểm tra employee tồn tại
+    employee = dao.get_employee_by_id(data['employeeId'])
+    if not employee:
+        return jsonify({'success': False, 'message': 'Nhân viên không tồn tại'}), 404
+
+    # Kiểm tra đã có phiếu dịch vụ chưa
+    if dao.check_service_form_exists(data['bookingId']):
+        return jsonify({'success': False, 'message': 'Booking này đã có phiếu dịch vụ'}), 400
+
+    # Validate dữ liệu
+    duration = int(data['serviceDuration'])
+    if duration < 15 or duration > 120:
+        return jsonify({'success': False, 'message': 'Thời lượng dịch vụ phải từ 15-120 phút'}), 400
+
+    price = float(data['servicePrice'])
+    if price <= 0:
+        return jsonify({'success': False, 'message': 'Giá dịch vụ phải lớn hơn 0'}), 400
+
+    # Tạo mã phiếu dịch vụ
+    form_data = data.copy()
+    form_data['formId'] = 'SF' + secrets.token_hex(4).upper()
+
+    service_form = dao.create_service_form(form_data)
+
+    return jsonify({
+        'success': True,
+        'message': 'Tạo phiếu dịch vụ thành công',
+        'data': {
+            'formId': service_form.formId,
+            'bookingId': service_form.bookingId,
+            'employeeId': service_form.employeeId,
+            'serviceName': service_form.serviceName,
+            'serviceDuration': service_form.serviceDuration,
+            'servicePrice': service_form.servicePrice,
+            'serviceNote': service_form.serviceNote,
+            'createdAt': service_form.createdAt.isoformat()
+        }
+    }), 201
+
+@app.route('/api/service-forms', methods=['GET'])
+@handle_errors
+def get_service_forms():
+    """Lấy danh sách phiếu dịch vụ"""
+    service_forms = dao.get_all_service_forms()
+    data = []
+
+    for sf in service_forms:
+        data.append({
+            'formId': sf.formId,
+            'bookingId': sf.bookingId,
+            'employeeId': sf.employeeId,
+            'employeeName': sf.employee.name if sf.employee else '',
+            'customerName': sf.booking.customer.name if sf.booking and sf.booking.customer else '',
+            'serviceName': sf.serviceName,
+            'serviceDuration': sf.serviceDuration,
+            'servicePrice': sf.servicePrice,
+            'serviceNote': sf.serviceNote,
+            'createdAt': sf.createdAt.isoformat()
+        })
+
+    return jsonify({'success': True, 'data': data}), 200
+
+@app.route('/api/service-forms/<formId>', methods=['GET'])
+@handle_errors
+def get_service_form(formId):
+    """Lấy thông tin phiếu dịch vụ theo ID"""
+    service_form = dao.get_service_form_by_id(formId)
+    if not service_form:
+        return jsonify({'success': False, 'message': 'Không tìm thấy phiếu dịch vụ'}), 404
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'formId': service_form.formId,
+            'bookingId': service_form.bookingId,
+            'employeeId': service_form.employeeId,
+            'employeeName': service_form.employee.name if service_form.employee else '',
+            'customerName': service_form.booking.customer.name if service_form.booking and service_form.booking.customer else '',
+            'serviceName': service_form.serviceName,
+            'serviceDuration': service_form.serviceDuration,
+            'servicePrice': service_form.servicePrice,
+            'serviceNote': service_form.serviceNote,
+            'createdAt': service_form.createdAt.isoformat()
+        }
+    }), 200
+
+@app.route('/api/service-forms/employee/<employeeId>', methods=['GET'])
+@handle_errors
+def get_service_forms_by_employee(employeeId):
+    """Lấy danh sách phiếu dịch vụ của nhân viên"""
+    employee = dao.get_employee_by_id(employeeId)
+    if not employee:
+        return jsonify({'success': False, 'message': 'Nhân viên không tồn tại'}), 404
+
+    service_forms = dao.get_service_forms_by_employee(employeeId)
+    data = []
+
+    for sf in service_forms:
+        data.append({
+            'formId': sf.formId,
+            'bookingId': sf.bookingId,
+            'customerName': sf.booking.customer.name if sf.booking and sf.booking.customer else '',
+            'serviceName': sf.serviceName,
+            'serviceDuration': sf.serviceDuration,
+            'servicePrice': sf.servicePrice,
+            'serviceNote': sf.serviceNote,
+            'createdAt': sf.createdAt.isoformat()
+        })
+
+    return jsonify({'success': True, 'data': data}), 200
+
+@app.route('/api/service-forms/<formId>', methods=['PUT'])
+@handle_errors
+def update_service_form(formId):
+    """Cập nhật phiếu dịch vụ"""
+    service_form = dao.get_service_form_by_id(formId)
+    if not service_form:
+        return jsonify({'success': False, 'message': 'Không tìm thấy phiếu dịch vụ'}), 404
+
+    data = request.get_json()
+
+    # Validate nếu có dữ liệu
+    if 'serviceDuration' in data:
+        duration = int(data['serviceDuration'])
+        if duration < 15 or duration > 120:
+            return jsonify({'success': False, 'message': 'Thời lượng dịch vụ phải từ 15-120 phút'}), 400
+
+    if 'servicePrice' in data:
+        price = float(data['servicePrice'])
+        if price <= 0:
+            return jsonify({'success': False, 'message': 'Giá dịch vụ phải lớn hơn 0'}), 400
+
+    dao.update_service_form(formId, data)
+
+    return jsonify({'success': True, 'message': 'Cập nhật phiếu dịch vụ thành công'}), 200
+
+@app.route('/api/service-forms/<formId>', methods=['DELETE'])
+@handle_errors
+def delete_service_form(formId):
+    """Xóa phiếu dịch vụ"""
+    service_form = dao.get_service_form_by_id(formId)
+    if not service_form:
+        return jsonify({'success': False, 'message': 'Không tìm thấy phiếu dịch vụ'}), 404
+
+    dao.delete_service_form(formId)
+    return jsonify({'success': True, 'message': 'Xóa phiếu dịch vụ thành công'}), 200
 
 # Route để redirect đến Flask-Admin
 @app.route('/admin')
