@@ -1,4 +1,4 @@
-# app_with_flask_admin.py
+# app.py
 from flask import request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -18,6 +18,7 @@ app = create_app()
 # Khởi tạo Flask-Admin
 admin = init_admin(app)
 
+
 # Cấu hình CORS
 @app.after_request
 def after_request(response):
@@ -25,6 +26,7 @@ def after_request(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
+
 
 # Handle OPTIONS requests cho CORS preflight
 @app.route('/api/<path:path>', methods=['OPTIONS'])
@@ -35,6 +37,7 @@ def handle_cors(path):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
+
 
 # AUTHENTICATION APIs
 
@@ -66,9 +69,8 @@ def register():
     customer_id = dao.generate_customer_id()
     customer_data = {
         'customerId': customer_id,
-        'name': data['name'],
-        'phone': data['phone'],
-        'email': data.get('email', '')
+        'loyaltyPoints': 0,
+        'membershipLevel': 'Basic'
     }
     customer = dao.create_customer(customer_data)
 
@@ -78,22 +80,19 @@ def register():
         'accountId': dao.generate_account_id(),
         'username': data['username'],
         'passwordHash': password_hash,
-        'role': 'Customer'
+        'role': 'Customer',
+        'fullName': data['name'],
+        'phone': data['phone'],
+        'email': data.get('email', '')
     }
     account = dao.create_account(account_data, customer_id)
 
     return jsonify({
         'success': True,
         'message': 'Đăng ký thành công',
-        'data': {
-            'accountId': account.accountId,
-            'username': account.username,
-            'role': account.role,
-            'customerId': customer_id,
-            'name': customer.name,
-            'createdAt': account.createdAt.isoformat()
-        }
+        'data': dao.get_account_info_by_role(account)
     }), 201
+
 
 @app.route('/api/auth/login', methods=['POST'])
 @validate_json(['username', 'password'])
@@ -114,32 +113,15 @@ def login():
     if not check_password_hash(account.passwordHash, data['password']):
         return jsonify({'success': False, 'message': 'Username hoặc password không đúng'}), 401
 
-    # Lấy thông tin chi tiết theo role
-    user_info = {
-        'accountId': account.accountId,
-        'username': account.username,
-        'role': account.role,
-        'createdAt': account.createdAt.isoformat()
-    }
-
-    # Nếu là Customer, lấy thông tin customer
-    if account.role == 'Customer' and account.customer:
-        user_info['customerId'] = account.customer.customerId
-        user_info['name'] = account.customer.name
-        user_info['phone'] = account.customer.phone
-        user_info['email'] = account.customer.email
-
-    # Nếu là Employee, lấy thông tin employee
-    if account.role == 'Employee' and account.employee:
-        user_info['employeeId'] = account.employee.employeeId
-        user_info['name'] = account.employee.name
-        user_info['employeeRole'] = account.employee.role
+    # Lấy thông tin chi tiết theo role từ account table
+    user_info = dao.get_account_info_by_role(account)
 
     return jsonify({
         'success': True,
         'message': 'Đăng nhập thành công',
         'data': user_info
     }), 200
+
 
 @app.route('/api/auth/change-password', methods=['PUT'])
 @validate_json(['username', 'oldPassword', 'newPassword'])
@@ -171,10 +153,11 @@ def change_password():
         'message': 'Đổi mật khẩu thành công'
     }), 200
 
+
 @app.route('/api/auth/profile', methods=['GET'])
 @handle_errors
 def get_profile():
-    """Lấy thông tin profile"""
+    """Lấy thông tin profile từ account table"""
     username = request.args.get('username')
 
     if not username:
@@ -185,31 +168,11 @@ def get_profile():
     if not account:
         return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
 
-    # Lấy thông tin chi tiết
-    profile = {
-        'accountId': account.accountId,
-        'username': account.username,
-        'role': account.role,
-        'createdAt': account.createdAt.isoformat()
-    }
+    # Lấy thông tin chi tiết từ account
+    profile = dao.get_account_info_by_role(account)
 
-    # Thông tin Customer
-    if account.role == 'Customer' and account.customer:
-        profile['customerId'] = account.customer.customerId
-        profile['name'] = account.customer.name
-        profile['phone'] = account.customer.phone
-        profile['email'] = account.customer.email
+    return jsonify({'success': True, 'data': profile}), 200
 
-    # Thông tin Employee
-    if account.role == 'Employee' and account.employee:
-        profile['employeeId'] = account.employee.employeeId
-        profile['name'] = account.employee.name
-        profile['employeeRole'] = account.employee.role
-
-    return jsonify({
-        'success': True,
-        'data': profile
-    }), 200
 
 @app.route('/api/auth/change-role', methods=['PUT'])
 @admin_required
@@ -236,166 +199,47 @@ def change_role():
     if old_role == new_role:
         return jsonify({'success': True, 'message': 'Role không thay đổi'}), 200
 
-    # Xử lý thay đổi role
-    if old_role == 'Customer' and new_role == 'Employee':
-        # Lấy thông tin customer để tạo employee
-        customer_name = target_account.customer.name if target_account.customer else data['username']
-        customer_phone = target_account.customer.phone if target_account.customer else ''
-        customer_email = target_account.customer.email if target_account.customer else ''
+    # Backup thông tin hiện tại từ account
+    backup_name = target_account.fullName or data.get('name', target_account.username)
+    backup_phone = target_account.phone or data.get('phone', '')
+    backup_email = target_account.email or data.get('email', '')
 
-        # Tạo Employee record với phone và email
-        employee_data = {
-            'employeeId': dao.generate_employee_id(),
-            'name': customer_name,
-            'role': 'Nhân viên',
-            'phone': customer_phone,
-            'email': customer_email
-        }
-        employee = dao.create_employee(employee_data)
+    # Soft delete records cũ
+    if target_account.customer:
+        target_account.customer.active = False
+    if target_account.employee:
+        target_account.employee.active = False
 
-        # Xóa customer record
-        if target_account.customer:
-            dao.delete_customer(target_account.customerId)
+    # Xử lý role mới
+    target_account.customerId = None
+    target_account.employeeId = None
 
-        # Cập nhật account
-        target_account.customerId = None
-        target_account.employeeId = employee.employeeId
-
-    elif old_role == 'Employee' and new_role == 'Customer':
-        # Lấy thông tin employee để tạo customer
-        employee_name = target_account.employee.name if target_account.employee else data['username']
-        employee_phone = target_account.employee.phone if target_account.employee else data.get('phone', '')
-        employee_email = target_account.employee.email if target_account.employee else data.get('email', '')
-
-        # Tạo Customer record
-        customer_data = {
-            'customerId': dao.generate_customer_id(),
-            'name': employee_name,
-            'phone': employee_phone,
-            'email': employee_email
-        }
-        customer = dao.create_customer(customer_data)
-
-        # Xóa employee record
-        if target_account.employee:
-            dao.delete_employee(target_account.employeeId)
-
-        # Cập nhật account
-        target_account.employeeId = None
-        target_account.customerId = customer.customerId
-
-    elif old_role == 'Customer' and new_role == 'Admin':
-        # Xóa customer record
-        if target_account.customer:
-            dao.delete_customer(target_account.customerId)
-        target_account.customerId = None
-
-    elif old_role == 'Employee' and new_role == 'Admin':
-        # Xóa employee record
-        if target_account.employee:
-            dao.delete_employee(target_account.employeeId)
-        target_account.employeeId = None
-
-    elif old_role == 'Admin' and new_role == 'Customer':
+    if new_role == 'Customer':
         # Tạo Customer record mới
         customer_data = {
             'customerId': dao.generate_customer_id(),
-            'name': data.get('name', data['username']),
-            'phone': data.get('phone', ''),
-            'email': data.get('email', '')
+            'loyaltyPoints': 0,
+            'membershipLevel': 'Basic'
         }
         customer = dao.create_customer(customer_data)
         target_account.customerId = customer.customerId
 
-    elif old_role == 'Admin' and new_role == 'Employee':
+    elif new_role in ['Employee', 'Cashier']:
         # Tạo Employee record mới
         employee_data = {
             'employeeId': dao.generate_employee_id(),
-            'name': data.get('name', data['username']),
-            'role': 'Nhân viên',
-            'phone': data.get('phone', ''),
-            'email': data.get('email', '')
+            'position': 'Thu ngân' if new_role == 'Cashier' else 'Kỹ thuật viên',
+            'department': 'Thu ngân' if new_role == 'Cashier' else 'Dịch vụ'
         }
         employee = dao.create_employee(employee_data)
         target_account.employeeId = employee.employeeId
 
-    elif old_role == 'Admin' and new_role == 'Cashier':
-        # Tạo Employee record mới với role Cashier
-        employee_data = {
-            'employeeId': dao.generate_employee_id(),
-            'name': data.get('name', data['username']),
-            'role': 'Thu ngân',
-            'phone': data.get('phone', ''),
-            'email': data.get('email', '')
-        }
-        employee = dao.create_employee(employee_data)
-        target_account.employeeId = employee.employeeId
-
-    elif old_role == 'Employee' and new_role == 'Cashier':
-        # Cập nhật role của employee hiện tại
-        if target_account.employee:
-            target_account.employee.role = 'Thu ngân'
-
-    elif old_role == 'Cashier' and new_role == 'Employee':
-        # Cập nhật role của employee hiện tại
-        if target_account.employee:
-            target_account.employee.role = 'Nhân viên'
-
-    elif old_role == 'Cashier' and new_role == 'Customer':
-        # Lấy thông tin employee để tạo customer
-        employee_name = target_account.employee.name if target_account.employee else data['username']
-        employee_phone = target_account.employee.phone if target_account.employee else data.get('phone', '')
-        employee_email = target_account.employee.email if target_account.employee else data.get('email', '')
-
-        # Tạo Customer record
-        customer_data = {
-            'customerId': dao.generate_customer_id(),
-            'name': employee_name,
-            'phone': employee_phone,
-            'email': employee_email
-        }
-        customer = dao.create_customer(customer_data)
-
-        # Xóa employee record
-        if target_account.employee:
-            dao.delete_employee(target_account.employeeId)
-
-        # Cập nhật account
-        target_account.employeeId = None
-        target_account.customerId = customer.customerId
-
-    elif old_role == 'Cashier' and new_role == 'Admin':
-        # Xóa employee record
-        if target_account.employee:
-            dao.delete_employee(target_account.employeeId)
-        target_account.employeeId = None
-
-    elif old_role == 'Customer' and new_role == 'Cashier':
-        # Lấy thông tin customer để tạo employee
-        customer_name = target_account.customer.name if target_account.customer else data['username']
-        customer_phone = target_account.customer.phone if target_account.customer else data.get('phone', '')
-        customer_email = target_account.customer.email if target_account.customer else data.get('email', '')
-
-        # Tạo Employee record với role Thu ngân
-        employee_data = {
-            'employeeId': dao.generate_employee_id(),
-            'name': customer_name,
-            'role': 'Thu ngân',
-            'phone': customer_phone,
-            'email': customer_email
-        }
-        employee = dao.create_employee(employee_data)
-
-        # Xóa customer record
-        if target_account.customer:
-            dao.delete_customer(target_account.customerId)
-
-        # Cập nhật account
-        target_account.customerId = None
-        target_account.employeeId = employee.employeeId
-
-    # Cập nhật role
+    # Cập nhật thông tin cơ bản trong account
     target_account.role = new_role
+    target_account.fullName = backup_name
+    target_account.phone = backup_phone
+    target_account.email = backup_email
+
     db.session.commit()
 
     return jsonify({
@@ -408,6 +252,7 @@ def change_role():
         }
     }), 200
 
+
 @app.route('/api/auth/accounts', methods=['GET'])
 @admin_required
 @handle_errors
@@ -418,34 +263,14 @@ def get_all_accounts():
         data = []
 
         for acc in accounts:
-            account_info = {
-                'accountId': acc.accountId,
-                'username': acc.username,
-                'role': acc.role,
-                'createdAt': acc.createdAt.isoformat()
-            }
-
-            # Thêm thông tin chi tiết theo role
-            if acc.role == 'Customer' and acc.customer:
-                account_info['name'] = acc.customer.name
-                account_info['phone'] = acc.customer.phone
-                account_info['email'] = acc.customer.email
-            elif acc.role == 'Employee' and acc.employee:
-                account_info['name'] = acc.employee.name
-                account_info['phone'] = acc.employee.phone or ''
-                account_info['email'] = acc.employee.email or ''
-                account_info['employeeRole'] = acc.employee.role
-            else:
-                account_info['name'] = acc.username
-                account_info['phone'] = ''
-                account_info['email'] = ''
-
+            account_info = dao.get_account_info_by_role(acc)
             data.append(account_info)
 
         return jsonify({'success': True, 'data': data}), 200
 
     except Exception as e:
         return jsonify({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'}), 500
+
 
 # CUSTOMER APIs
 
@@ -457,18 +282,38 @@ def create_customer():
     dao.create_customer(data)
     return jsonify({'success': True, 'message': "Tạo khách hàng thành công"}), 201
 
+
 @app.route('/api/customers', methods=['GET'])
 @handle_errors
 def get_customers():
-    """Lấy danh sách khách hàng"""
+    """Lấy danh sách khách hàng active"""
     customers = dao.get_all_customers()
-    data = [{
-        'customerId': c.customerId,
-        'name': c.name,
-        'phone': c.phone,
-        'email': c.email
-    } for c in customers]
+    data = []
+    for c in customers:
+        customer_info = {
+            'customerId': c.customerId,
+            'loyaltyPoints': c.loyaltyPoints,
+            'membershipLevel': c.membershipLevel
+        }
+
+        # Tìm account tương ứng với customer này
+        account = Account.query.filter_by(customerId=c.customerId).first()
+        if account:
+            customer_info.update({
+                'name': account.fullName or '',
+                'phone': account.phone or '',
+                'email': account.email or ''
+            })
+        else:
+            customer_info.update({
+                'name': 'N/A',
+                'phone': '',
+                'email': ''
+            })
+
+        data.append(customer_info)
     return jsonify({'success': True, 'data': data}), 200
+
 
 @app.route('/api/customers/<customerId>', methods=['GET'])
 @handle_errors
@@ -477,15 +322,30 @@ def get_customer(customerId):
     customer = dao.get_customer_by_id(customerId)
     if not customer:
         return jsonify({'success': False, 'message': 'Không tìm thấy khách hàng'}), 404
-    return jsonify({
-        'success': True,
-        'data': {
-            'customerId': customer.customerId,
-            'name': customer.name,
-            'phone': customer.phone,
-            'email': customer.email
-        }
-    }), 200
+
+    customer_info = {
+        'customerId': customer.customerId,
+        'loyaltyPoints': customer.loyaltyPoints,
+        'membershipLevel': customer.membershipLevel
+    }
+
+    # Tìm account tương ứng với customer này
+    account = Account.query.filter_by(customerId=customer.customerId).first()
+    if account:
+        customer_info.update({
+            'name': account.fullName or '',
+            'phone': account.phone or '',
+            'email': account.email or ''
+        })
+    else:
+        customer_info.update({
+            'name': 'N/A',
+            'phone': '',
+            'email': ''
+        })
+
+    return jsonify({'success': True, 'data': customer_info}), 200
+
 
 @app.route('/api/customers/<customerId>', methods=['PUT'])
 @handle_errors
@@ -499,6 +359,7 @@ def update_customer(customerId):
     dao.update_customer(customerId, data)
 
     return jsonify({'success': True, 'message': 'Cập nhật khách hàng thành công'}), 200
+
 
 @app.route('/api/customers/<customerId>', methods=['DELETE'])
 @handle_errors
@@ -514,6 +375,7 @@ def delete_customer_api(customerId):
     dao.delete_customer(customerId)
     return jsonify({'success': True, 'message': 'Xóa khách hàng thành công'}), 200
 
+
 # EMPLOYEE APIs
 
 @app.route('/api/employees', methods=['POST'])
@@ -524,19 +386,38 @@ def create_employee():
     dao.create_employee(data)
     return jsonify({'success': True, 'message': "Tạo nhân viên thành công"}), 201
 
+
 @app.route('/api/employees', methods=['GET'])
 @handle_errors
 def get_employees():
-    """Lấy danh sách nhân viên"""
+    """Lấy danh sách nhân viên active (không bao gồm cashier)"""
     employees = dao.get_all_employees()
-    data = [{
-        'employeeId': e.employeeId,
-        'name': e.name,
-        'role': e.role,
-        'phone': e.phone or '',
-        'email': e.email or ''
-    } for e in employees]
+    data = []
+    for e in employees:
+        employee_info = {
+            'employeeId': e.employeeId,
+            'position': e.position,
+            'department': e.department
+        }
+
+        # Tìm account tương ứng với employee này
+        account = Account.query.filter_by(employeeId=e.employeeId).first()
+        if account:
+            employee_info.update({
+                'name': account.fullName or '',
+                'phone': account.phone or '',
+                'email': account.email or ''
+            })
+        else:
+            employee_info.update({
+                'name': 'N/A',
+                'phone': '',
+                'email': ''
+            })
+
+        data.append(employee_info)
     return jsonify({'success': True, 'data': data}), 200
+
 
 @app.route('/api/employees/<employeeId>', methods=['GET'])
 @handle_errors
@@ -545,13 +426,30 @@ def get_employee(employeeId):
     employee = dao.get_employee_by_id(employeeId)
     if not employee:
         return jsonify({'success': False, 'message': 'Không tìm thấy nhân viên'}), 404
-    return jsonify({'success': True, 'data': {
+
+    employee_info = {
         'employeeId': employee.employeeId,
-        'name': employee.name,
-        'role': employee.role,
-        'phone': employee.phone or '',
-        'email': employee.email or ''
-    }}), 200
+        'position': employee.position,
+        'department': employee.department
+    }
+
+    # Tìm account tương ứng với employee này
+    account = Account.query.filter_by(employeeId=employee.employeeId).first()
+    if account:
+        employee_info.update({
+            'name': account.fullName or '',
+            'phone': account.phone or '',
+            'email': account.email or ''
+        })
+    else:
+        employee_info.update({
+            'name': 'N/A',
+            'phone': '',
+            'email': ''
+        })
+
+    return jsonify({'success': True, 'data': employee_info}), 200
+
 
 @app.route('/api/employees/<employeeId>', methods=['PUT'])
 @handle_errors
@@ -565,6 +463,7 @@ def update_employee(employeeId):
     dao.update_employee(employeeId, data)
 
     return jsonify({'success': True, 'message': 'Cập nhật nhân viên thành công'}), 200
+
 
 @app.route('/api/employees/<employeeId>', methods=['DELETE'])
 @handle_errors
@@ -580,6 +479,7 @@ def delete_employee_api(employeeId):
     dao.delete_employee(employeeId)
     return jsonify({'success': True, 'message': 'Xóa nhân viên thành công'}), 200
 
+
 # SERVICE APIs
 
 @app.route('/api/services/generate-id', methods=['GET'])
@@ -588,6 +488,7 @@ def generate_service_id():
     """Tạo mã dịch vụ tự động"""
     service_id = 'SV' + secrets.token_hex(4).upper()
     return jsonify({'success': True, 'servicesId': service_id}), 200
+
 
 @app.route('/api/services/submit', methods=['POST'])
 @validate_json(['name', 'durration', 'price'])
@@ -611,6 +512,7 @@ def create_service():
     dao.create_service(data)
     return jsonify({'success': True, 'message': "Tạo dịch vụ thành công"}), 201
 
+
 @app.route('/api/services', methods=['GET'])
 @cors_enabled
 @handle_errors
@@ -621,10 +523,11 @@ def get_services():
         'servicesId': s.servicesId,
         'name': s.name,
         'durration': s.durration,
-        'price': s.price,
+        'price': float(s.price) if s.price is not None else 0.0,
         'note': s.note
     } for s in services]
     return jsonify({'success': True, 'data': data}), 200
+
 
 @app.route('/api/services/<servicesId>', methods=['GET'])
 @handle_errors
@@ -637,9 +540,10 @@ def get_service(servicesId):
         'servicesId': service.servicesId,
         'name': service.name,
         'durration': service.durration,
-        'price': service.price,
+        'price': float(service.price) if service.price is not None else 0.0,
         'note': service.note
     }}), 200
+
 
 @app.route('/api/services/<servicesId>', methods=['PUT'])
 @handle_errors
@@ -658,6 +562,7 @@ def update_service(servicesId):
     dao.update_service(servicesId, data)
     return jsonify({'success': True, 'message': 'Cập nhật dịch vụ thành công'}), 200
 
+
 @app.route('/api/services/<servicesId>', methods=['DELETE'])
 @handle_errors
 def delete_service(servicesId):
@@ -671,6 +576,7 @@ def delete_service(servicesId):
 
     dao.delete_service(servicesId)
     return jsonify({'success': True, 'message': 'Xóa dịch vụ thành công'}), 200
+
 
 # BOOKING APIs
 
@@ -708,22 +614,36 @@ def create_booking():
     dao.create_booking(data)
     return jsonify({'success': True, 'message': "Tạo lịch thành công"}), 201
 
+
 @app.route('/api/bookings', methods=['GET'])
 @handle_errors
 def get_bookings():
-    """Lấy danh sách booking"""
+    """Lấy danh sách booking với thông tin từ account"""
     bookings = dao.get_all_bookings()
     data = []
     for b in bookings:
+        # Tìm account cho customer và employee
+        customer_account = Account.query.filter_by(customerId=b.customerId).first()
+        employee_account = Account.query.filter_by(employeeId=b.employeeId).first()
+
+        customer_name = customer_account.fullName if customer_account else 'N/A'
+        employee_name = employee_account.fullName if employee_account else 'N/A'
+
         data.append({
             'bookingId': b.bookingId,
             'time': b.time.isoformat(),
             'status': b.status,
-            'customer': {'customerId': b.customerId, 'name': b.customer.name},
-            'service': {'servicesId': b.servicesId, 'name': b.service.name},
-            'employee': {'employeeId': b.employeeId, 'name': b.employee.name}
+            'customer': {'customerId': b.customerId, 'name': customer_name},
+            'service': {
+                'servicesId': b.servicesId,
+                'name': b.service.name,
+                'price': float(b.service.price) if b.service.price is not None else 0.0,
+                'durration': b.service.durration
+            },
+            'employee': {'employeeId': b.employeeId, 'name': employee_name}
         })
     return jsonify({'success': True, 'data': data}), 200
+
 
 @app.route('/api/bookings/<bookingId>', methods=['GET'])
 @handle_errors
@@ -733,14 +653,27 @@ def get_booking(bookingId):
     if not b:
         return jsonify({'success': False, 'message': 'Không tìm thấy lịch'}), 404
 
+    # Tìm account cho customer và employee
+    customer_account = Account.query.filter_by(customerId=b.customerId).first()
+    employee_account = Account.query.filter_by(employeeId=b.employeeId).first()
+
+    customer_name = customer_account.fullName if customer_account else 'N/A'
+    employee_name = employee_account.fullName if employee_account else 'N/A'
+
     return jsonify({'success': True, 'data': {
         'bookingId': b.bookingId,
         'time': b.time.isoformat(),
         'status': b.status,
-        'customer': {'customerId': b.customerId, 'name': b.customer.name},
-        'service': {'servicesId': b.servicesId, 'name': b.service.name},
-        'employee': {'employeeId': b.employeeId, 'name': b.employee.name}
+        'customer': {'customerId': b.customerId, 'name': customer_name},
+        'service': {
+            'servicesId': b.servicesId,
+            'name': b.service.name,
+            'price': float(b.service.price) if b.service.price is not None else 0.0,
+            'durration': b.service.durration
+        },
+        'employee': {'employeeId': b.employeeId, 'name': employee_name}
     }}), 200
+
 
 @app.route('/api/bookings/<bookingId>', methods=['PUT'])
 @handle_errors
@@ -754,6 +687,7 @@ def update_booking(bookingId):
     dao.update_booking(bookingId, data)
     return jsonify({'success': True, 'message': "Cập nhật lịch thành công"}), 200
 
+
 @app.route('/api/bookings/<bookingId>', methods=['DELETE'])
 @handle_errors
 def delete_booking(bookingId):
@@ -765,7 +699,66 @@ def delete_booking(bookingId):
     dao.delete_booking(bookingId)
     return jsonify({'success': True, 'message': "Xóa lịch thành công"}), 200
 
+
 # INVOICE APIs
+
+@app.route('/api/invoices/preview', methods=['POST'])
+@handle_errors
+def preview_invoice():
+    """Tính toán preview hóa đơn trước khi xuất"""
+    data = request.get_json()
+
+    booking = dao.get_booking_by_id(data['bookingId'])
+    if not booking:
+        return jsonify({'success': False, 'message': 'Không tìm thấy booking'}), 404
+
+    # Lấy service từ booking
+    service = booking.service
+    if not service:
+        return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
+
+    # Xử lý price
+    price = service.price
+    if price is None:
+        price = 0
+
+    try:
+        total = float(price)
+    except (ValueError, TypeError):
+        total = 0.0
+
+    # Lấy cấu hình từ settings
+    vat_rate = float(dao.get_setting_value('vat_rate', '10'))
+    max_discount_rate = float(dao.get_setting_value('max_discount', '20'))
+
+    discount_percent = float(data.get('discount', 0))
+    if discount_percent < 0 or discount_percent > max_discount_rate:
+        return jsonify({'success': False, 'message': f'Giảm giá tối đa {max_discount_rate}%'}), 400
+
+    # Tính toán
+    discount = total * discount_percent / 100
+    subtotal = total - discount
+    vat = subtotal * vat_rate / 100
+    finalTotal = subtotal + vat
+
+    # Lấy tên customer từ account
+    customer_account = Account.query.filter_by(customerId=booking.customerId).first()
+    customer_name = customer_account.fullName if customer_account else 'N/A'
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'serviceName': service.name,
+            'customerName': customer_name,
+            'total': total,
+            'discount': discount,
+            'discountPercent': discount_percent,
+            'vat': vat,
+            'vatPercent': vat_rate,
+            'finalTotal': finalTotal
+        }
+    }), 200
+
 
 @app.route('/api/invoices', methods=['POST'])
 @handle_errors
@@ -783,18 +776,36 @@ def create_invoice():
     if dao.get_invoice_by_id(data['invoiceId']):
         return jsonify({'success': False, 'message': 'Mã hóa đơn đã tồn tại'}), 400
 
-    service = Service.query.get(booking.servicesId)
+    # Lấy service từ booking.service relationship
+    service = booking.service
+    if not service:
+        return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
+
+    # Kiểm tra và xử lý price
+    price = service.price
+    if price is None:
+        price = 0
+
+    # Convert to float safely
+    try:
+        total = float(price)
+    except (ValueError, TypeError):
+        total = 0.0
+
+    # Nếu price vẫn bằng 0, báo lỗi
+    if total <= 0:
+        return jsonify({'success': False,
+                        'message': f'Giá dịch vụ "{service.name}" chưa được thiết lập. Vui lòng cập nhật giá dịch vụ trong trang quản lý.'}), 400
 
     # Lấy cấu hình từ settings
     vat_rate = float(dao.get_setting_value('vat_rate', '10'))
     max_discount_rate = float(dao.get_setting_value('max_discount', '20'))
 
-    total = service.price
-
     discount_percent = float(data.get('discount', 0))
     if discount_percent < 0 or discount_percent > max_discount_rate:
         return jsonify({'success': False, 'message': f'Giảm giá tối đa {max_discount_rate}%'}), 400
 
+    # Tính toán
     discount = total * discount_percent / 100
     subtotal = total - discount
     vat = subtotal * vat_rate / 100
@@ -811,13 +822,17 @@ def create_invoice():
 
     invoice = dao.create_invoice(invoice_data, data['bookingId'])
 
+    # Lấy tên customer từ account
+    customer_account = Account.query.filter_by(customerId=booking.customerId).first()
+    customer_name = customer_account.fullName if customer_account else 'N/A'
+
     return jsonify({
         'success': True,
         'message': 'Tạo hóa đơn thành công',
         'data': {
             'invoiceId': invoice.invoiceId,
             'customerId': invoice.customerId,
-            'customerName': booking.customer.name,
+            'customerName': customer_name,
             'serviceName': service.name,
             'total': total,
             'discount': discount,
@@ -825,6 +840,7 @@ def create_invoice():
             'finalTotal': finalTotal
         }
     }), 201
+
 
 @app.route('/api/invoices', methods=['GET'])
 @handle_errors
@@ -836,10 +852,14 @@ def get_invoices():
     for inv in invoices:
         booking = inv.booking
 
+        # Lấy customer name từ account
+        customer_account = Account.query.filter_by(customerId=inv.customerId).first()
+        customer_name = customer_account.fullName if customer_account else 'N/A'
+
         data.append({
             'invoiceId': inv.invoiceId,
             'customerId': inv.customerId,
-            'customerName': inv.customer.name,
+            'customerName': customer_name,
             'serviceName': booking.service.name if booking else '',
             'total': inv.total,
             'discount': inv.discount,
@@ -848,6 +868,7 @@ def get_invoices():
         })
 
     return jsonify({'success': True, 'data': data}), 200
+
 
 @app.route('/api/invoices/<invoiceId>', methods=['GET'])
 @handle_errors
@@ -859,16 +880,24 @@ def get_invoice(invoiceId):
 
     booking = invoice.booking
 
+    # Lấy thông tin customer và employee từ account
+    customer_account = Account.query.filter_by(customerId=invoice.customerId).first()
+    employee_account = Account.query.filter_by(employeeId=booking.employeeId).first() if booking else None
+
+    customer_name = customer_account.fullName if customer_account else 'N/A'
+    customer_phone = customer_account.phone if customer_account else 'N/A'
+    employee_name = employee_account.fullName if employee_account else 'N/A'
+
     return jsonify({
         'success': True,
         'data': {
             'invoiceId': invoice.invoiceId,
             'customerId': invoice.customerId,
-            'customerName': invoice.customer.name,
-            'customerPhone': invoice.customer.phone,
+            'customerName': customer_name,
+            'customerPhone': customer_phone,
             'serviceName': booking.service.name if booking else '',
             'servicePrice': booking.service.price if booking else 0,
-            'employeeName': booking.employee.name if booking else '',
+            'employeeName': employee_name,
             'bookingTime': booking.time.isoformat() if booking else '',
             'total': invoice.total,
             'discount': invoice.discount,
@@ -876,6 +905,7 @@ def get_invoice(invoiceId):
             'finalTotal': invoice.finalTotal
         }
     }), 200
+
 
 @app.route('/api/invoices/<invoiceId>', methods=['PUT'])
 @handle_errors
@@ -888,8 +918,14 @@ def update_invoice(invoiceId):
     data = request.get_json()
 
     booking = invoice.booking
-    service = Service.query.get(booking.servicesId)
-    total = service.price
+    if not booking:
+        return jsonify({'success': False, 'message': 'Không tìm thấy booking liên quan'}), 404
+
+    service = dao.get_service_by_id(booking.servicesId)
+    if not service:
+        return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ'}), 404
+
+    total = float(service.price)
 
     vat_rate = float(dao.get_setting_value('vat_rate', '10'))
     max_discount_rate = float(dao.get_setting_value('max_discount', '20'))
@@ -924,6 +960,7 @@ def update_invoice(invoiceId):
         }
     }), 200
 
+
 @app.route('/api/invoices/<invoiceId>', methods=['DELETE'])
 @handle_errors
 def delete_invoice(invoiceId):
@@ -934,6 +971,7 @@ def delete_invoice(invoiceId):
 
     dao.delete_invoice(invoiceId)
     return jsonify({'success': True, 'message': 'Xóa hóa đơn thành công'}), 200
+
 
 # SETTINGS APIs
 
@@ -949,6 +987,7 @@ def get_all_settings():
     } for s in settings]
 
     return jsonify({'success': True, 'data': data}), 200
+
 
 @app.route('/api/settings/<settingId>', methods=['GET'])
 @handle_errors
@@ -966,6 +1005,7 @@ def get_setting(settingId):
             'description': setting.description
         }
     }), 200
+
 
 @app.route('/api/settings/<settingId>', methods=['PUT'])
 @handle_errors
@@ -1012,6 +1052,7 @@ def update_setting(settingId):
         }
     }), 200
 
+
 @app.route('/api/settings/service-price/<servicesId>', methods=['PUT'])
 @handle_errors
 def update_service_price_via_settings(servicesId):
@@ -1045,6 +1086,7 @@ def update_service_price_via_settings(servicesId):
             'price': service.price
         }
     }), 200
+
 
 # REPORTS APIs
 
@@ -1103,6 +1145,7 @@ def get_daily_revenue_report():
         }
     }), 200
 
+
 @app.route('/api/reports/service-frequency', methods=['GET'])
 @handle_errors
 def get_service_frequency_report():
@@ -1154,6 +1197,7 @@ def get_service_frequency_report():
             'total_count': total_count
         }
     }), 200
+
 
 # SERVICE FORMS APIs
 
@@ -1209,6 +1253,7 @@ def create_service_form():
         }
     }), 201
 
+
 @app.route('/api/service-forms', methods=['GET'])
 @handle_errors
 def get_service_forms():
@@ -1217,12 +1262,21 @@ def get_service_forms():
     data = []
 
     for sf in service_forms:
+        # Tìm account cho employee và customer
+        employee_account = Account.query.filter_by(employeeId=sf.employeeId).first()
+        customer_account = None
+        if sf.booking and sf.booking.customerId:
+            customer_account = Account.query.filter_by(customerId=sf.booking.customerId).first()
+
+        employee_name = employee_account.fullName if employee_account else 'N/A'
+        customer_name = customer_account.fullName if customer_account else 'N/A'
+
         data.append({
             'formId': sf.formId,
             'bookingId': sf.bookingId,
             'employeeId': sf.employeeId,
-            'employeeName': sf.employee.name if sf.employee else '',
-            'customerName': sf.booking.customer.name if sf.booking and sf.booking.customer else '',
+            'employeeName': employee_name,
+            'customerName': customer_name,
             'serviceName': sf.serviceName,
             'serviceDuration': sf.serviceDuration,
             'servicePrice': sf.servicePrice,
@@ -1232,6 +1286,7 @@ def get_service_forms():
 
     return jsonify({'success': True, 'data': data}), 200
 
+
 @app.route('/api/service-forms/<formId>', methods=['GET'])
 @handle_errors
 def get_service_form(formId):
@@ -1240,14 +1295,23 @@ def get_service_form(formId):
     if not service_form:
         return jsonify({'success': False, 'message': 'Không tìm thấy phiếu dịch vụ'}), 404
 
+    # Tìm account cho employee và customer
+    employee_account = Account.query.filter_by(employeeId=service_form.employeeId).first()
+    customer_account = None
+    if service_form.booking and service_form.booking.customerId:
+        customer_account = Account.query.filter_by(customerId=service_form.booking.customerId).first()
+
+    employee_name = employee_account.fullName if employee_account else 'N/A'
+    customer_name = customer_account.fullName if customer_account else 'N/A'
+
     return jsonify({
         'success': True,
         'data': {
             'formId': service_form.formId,
             'bookingId': service_form.bookingId,
             'employeeId': service_form.employeeId,
-            'employeeName': service_form.employee.name if service_form.employee else '',
-            'customerName': service_form.booking.customer.name if service_form.booking and service_form.booking.customer else '',
+            'employeeName': employee_name,
+            'customerName': customer_name,
             'serviceName': service_form.serviceName,
             'serviceDuration': service_form.serviceDuration,
             'servicePrice': service_form.servicePrice,
@@ -1255,6 +1319,7 @@ def get_service_form(formId):
             'createdAt': service_form.createdAt.isoformat()
         }
     }), 200
+
 
 @app.route('/api/service-forms/employee/<employeeId>', methods=['GET'])
 @handle_errors
@@ -1268,10 +1333,16 @@ def get_service_forms_by_employee(employeeId):
     data = []
 
     for sf in service_forms:
+        customer_account = None
+        if sf.booking and sf.booking.customerId:
+            customer_account = Account.query.filter_by(customerId=sf.booking.customerId).first()
+
+        customer_name = customer_account.fullName if customer_account else 'N/A'
+
         data.append({
             'formId': sf.formId,
             'bookingId': sf.bookingId,
-            'customerName': sf.booking.customer.name if sf.booking and sf.booking.customer else '',
+            'customerName': customer_name,
             'serviceName': sf.serviceName,
             'serviceDuration': sf.serviceDuration,
             'servicePrice': sf.servicePrice,
@@ -1280,6 +1351,7 @@ def get_service_forms_by_employee(employeeId):
         })
 
     return jsonify({'success': True, 'data': data}), 200
+
 
 @app.route('/api/service-forms/<formId>', methods=['PUT'])
 @handle_errors
@@ -1306,6 +1378,7 @@ def update_service_form(formId):
 
     return jsonify({'success': True, 'message': 'Cập nhật phiếu dịch vụ thành công'}), 200
 
+
 @app.route('/api/service-forms/<formId>', methods=['DELETE'])
 @handle_errors
 def delete_service_form(formId):
@@ -1317,6 +1390,7 @@ def delete_service_form(formId):
     dao.delete_service_form(formId)
     return jsonify({'success': True, 'message': 'Xóa phiếu dịch vụ thành công'}), 200
 
+
 # Route để redirect đến Flask-Admin
 @app.route('/admin')
 def redirect_to_admin():
@@ -1324,6 +1398,7 @@ def redirect_to_admin():
     from flask import redirect
     admin_user = request.args.get('user', 'admin')
     return redirect(f'/admin/?admin={admin_user}')
+
 
 if __name__ == '__main__':
     with app.app_context():

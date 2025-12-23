@@ -1,4 +1,3 @@
-# Chứa cấu hình phần quản trị (admin) của ứng dụng
 # admin.py
 from flask import redirect, url_for, request, flash
 from flask_admin import Admin, AdminIndexView, expose
@@ -24,9 +23,9 @@ class SecureAdminIndexView(AdminIndexView):
 
         # Thống kê cơ bản
         stats = {
-            'total_customers': Customer.query.count(),
+            'total_customers': Customer.query.filter_by(active=True).count(),
             'total_services': Service.query.count(),
-            'total_employees': Employee.query.count(),
+            'total_employees': Employee.query.filter_by(active=True).count(),
             'total_bookings': Booking.query.count(),
             'pending_bookings': Booking.query.filter_by(status='Đang chờ').count(),
             'total_invoices': Invoice.query.count()
@@ -62,28 +61,33 @@ class SecureModelView(ModelView):
 class CustomerAdmin(SecureModelView):
     """Quản lý khách hàng"""
 
-    # Cột hiển thị
-    column_list = ('customerId', 'name', 'phone', 'email')
-    column_searchable_list = ('name', 'phone', 'email')
-    column_filters = ('name', 'phone')
+    # Cột hiển thị - sử dụng relationship với account
+    column_list = ('customerId', 'account.fullName', 'account.phone', 'account.email', 'loyaltyPoints', 'membershipLevel')
+    column_searchable_list = ('customerId', 'account.fullName', 'account.phone')
+    column_filters = ('loyaltyPoints', 'membershipLevel', 'active')
     column_labels = {
         'customerId': 'Mã KH',
-        'name': 'Tên khách hàng',
-        'phone': 'Điện thoại',
-        'email': 'Email'
+        'account.fullName': 'Tên khách hàng',
+        'account.phone': 'Điện thoại',
+        'account.email': 'Email',
+        'loyaltyPoints': 'Điểm tích lũy',
+        'membershipLevel': 'Hạng thành viên'
     }
 
-    # Form tạo/sửa
-    form_columns = ('customerId', 'name', 'phone', 'email')
+    # Form tạo/sửa - chỉ các field trong Customer model
+    form_columns = ('customerId', 'loyaltyPoints', 'membershipLevel', 'active')
     form_args = {
         'customerId': {'validators': [DataRequired()], 'render_kw': {'placeholder': 'Mã khách hàng'}},
-        'name': {'validators': [DataRequired()], 'render_kw': {'placeholder': 'Tên đầy đủ'}},
-        'phone': {'validators': [DataRequired()], 'render_kw': {'placeholder': 'Số điện thoại'}},
-        'email': {'validators': [Optional(), Email()], 'render_kw': {'placeholder': 'Email'}}
+        'loyaltyPoints': {'validators': [Optional()], 'render_kw': {'placeholder': 'Điểm tích lũy'}},
+        'membershipLevel': {'validators': [Optional()], 'render_kw': {'placeholder': 'Hạng thành viên'}},
     }
 
     # Phân trang
     page_size = 20
+
+    # Query chỉ lấy customer active
+    def get_query(self):
+        return self.session.query(self.model).filter_by(active=True)
 
     def create_model(self, form):
         # Tạo mã khách hàng tự động nếu chưa có
@@ -137,25 +141,30 @@ class ServiceAdmin(SecureModelView):
 class EmployeeAdmin(SecureModelView):
     """Quản lý nhân viên"""
 
-    column_list = ('employeeId', 'name', 'role', 'phone', 'email')
-    column_searchable_list = ('name', 'employeeId', 'role')
-    column_filters = ('role',)
+    # Cột hiển thị - sử dụng relationship với account
+    column_list = ('employeeId', 'account.fullName', 'position', 'department', 'account.phone', 'account.email')
+    column_searchable_list = ('employeeId', 'account.fullName', 'position')
+    column_filters = ('position', 'department', 'active')
     column_labels = {
         'employeeId': 'Mã NV',
-        'name': 'Tên nhân viên',
-        'role': 'Chức vụ',
-        'phone': 'Điện thoại',
-        'email': 'Email'
+        'account.fullName': 'Tên nhân viên',
+        'position': 'Vị trí',
+        'department': 'Phòng ban',
+        'account.phone': 'Điện thoại',
+        'account.email': 'Email'
     }
 
-    form_columns = ('employeeId', 'name', 'role', 'phone', 'email')
+    # Form tạo/sửa - chỉ các field trong Employee model
+    form_columns = ('employeeId', 'position', 'department', 'active')
     form_args = {
         'employeeId': {'validators': [DataRequired()]},
-        'name': {'validators': [DataRequired()]},
-        'role': {'validators': [DataRequired()]},
-        'phone': {'validators': [Optional()]},
-        'email': {'validators': [Optional(), Email()]}
+        'position': {'validators': [DataRequired()]},
+        'department': {'validators': [DataRequired()]},
     }
+
+    # Query chỉ lấy employee active
+    def get_query(self):
+        return self.session.query(self.model).filter_by(active=True)
 
     def create_model(self, form):
         if not form.employeeId.data:
@@ -167,14 +176,14 @@ class EmployeeAdmin(SecureModelView):
 class BookingAdmin(SecureModelView):
     """Quản lý đặt lịch"""
 
-    column_list = ('bookingId', 'customer.name', 'service.name', 'employee.name', 'time', 'status')
-    column_searchable_list = ('bookingId', 'customer.name', 'service.name')
+    column_list = ('bookingId', 'customer.account.fullName', 'service.name', 'employee.account.fullName', 'time', 'status')
+    column_searchable_list = ('bookingId',)
     column_filters = ('status', 'time')
     column_labels = {
         'bookingId': 'Mã booking',
-        'customer.name': 'Khách hàng',
+        'customer.account.fullName': 'Khách hàng',
         'service.name': 'Dịch vụ',
-        'employee.name': 'Nhân viên',
+        'employee.account.fullName': 'Nhân viên',
         'time': 'Thời gian',
         'status': 'Trạng thái'
     }
@@ -184,12 +193,9 @@ class BookingAdmin(SecureModelView):
         'time': lambda v, c, m, p: m.time.strftime('%d/%m/%Y %H:%M') if m.time else ''
     }
 
-    # Không dùng HTML markup trong formatters để tránh lỗi
-    column_formatters_export = None
-
     form_columns = ('bookingId', 'customerId', 'servicesId', 'employeeId', 'time', 'status')
 
-    # Dropdown cho foreign keys
+    # Dropdown cho status
     form_overrides = {
         'status': SelectField
     }
@@ -212,12 +218,12 @@ class BookingAdmin(SecureModelView):
 class InvoiceAdmin(SecureModelView):
     """Quản lý hóa đơn"""
 
-    column_list = ('invoiceId', 'customer.name', 'total', 'discount', 'vat', 'finalTotal')
-    column_searchable_list = ('invoiceId', 'customer.name')
+    column_list = ('invoiceId', 'customer.account.fullName', 'total', 'discount', 'vat', 'finalTotal')
+    column_searchable_list = ('invoiceId',)
     column_filters = ('finalTotal',)
     column_labels = {
         'invoiceId': 'Mã hóa đơn',
-        'customer.name': 'Khách hàng',
+        'customer.account.fullName': 'Khách hàng',
         'total': 'Tổng tiền',
         'discount': 'Giảm giá',
         'vat': 'VAT',
@@ -240,22 +246,23 @@ class InvoiceAdmin(SecureModelView):
 class AccountAdmin(SecureModelView):
     """Quản lý tài khoản"""
 
-    column_list = ('accountId', 'username', 'role', 'customer.name', 'employee.name', 'createdAt')
-    column_searchable_list = ('username', 'accountId')
+    column_list = ('accountId', 'username', 'role', 'fullName', 'phone', 'email', 'createdAt')
+    column_searchable_list = ('username', 'accountId', 'fullName')
     column_filters = ('role', 'createdAt')
     column_labels = {
         'accountId': 'Mã tài khoản',
         'username': 'Tên đăng nhập',
         'role': 'Vai trò',
-        'customer.name': 'Tên khách hàng',
-        'employee.name': 'Tên nhân viên',
+        'fullName': 'Họ tên',
+        'phone': 'Điện thoại',
+        'email': 'Email',
         'createdAt': 'Ngày tạo'
     }
 
     # Ẩn cột password
     column_exclude_list = ('passwordHash',)
 
-    form_columns = ('accountId', 'username', 'role', 'customerId', 'employeeId')
+    form_columns = ('accountId', 'username', 'role', 'fullName', 'phone', 'email')
 
     form_overrides = {
         'role': SelectField

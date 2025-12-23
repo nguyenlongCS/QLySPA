@@ -17,22 +17,30 @@ class Account(db.Model):
     accountId = db.Column(db.String(50), primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     passwordHash = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='Customer')  # Customer, Employee, Admin
+    role = db.Column(db.String(20), nullable=False)  # Customer, Employee, Admin, Cashier
+
+    # Thông tin cơ bản được lưu trực tiếp trong accounts
+    fullName = db.Column(db.String(100))
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(100))
+
     customerId = db.Column(db.String(50), db.ForeignKey('customers.customerId'))
     employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'))
     createdAt = db.Column(db.DateTime, default=datetime.now)
 
-    customer = db.relationship('Customer', backref='account', uselist=False, lazy=True)
-    employee = db.relationship('Employee', backref='account', uselist=False, lazy=True)
+    customer = db.relationship('Customer', backref=db.backref('account', uselist=False), uselist=False, lazy=True)
+    employee = db.relationship('Employee', backref=db.backref('account', uselist=False), uselist=False, lazy=True)
 
 
 class Customer(db.Model):
     """Model cho bảng khách hàng"""
     __tablename__ = 'customers'
     customerId = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    phone = db.Column(db.String(20), nullable=False)
-    email = db.Column(db.String(100))
+    # Thông tin đặc thù của customer
+    loyaltyPoints = db.Column(db.Integer, default=0)
+    membershipLevel = db.Column(db.String(20), default='Basic')
+    # Soft delete
+    active = db.Column(db.Boolean, default=True)
     bookings = db.relationship('Booking', backref='customer', lazy=True)
 
 
@@ -51,10 +59,11 @@ class Employee(db.Model):
     """Model cho bảng nhân viên"""
     __tablename__ = 'employees'
     employeeId = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    role = db.Column(db.String(50), nullable=False)
-    phone = db.Column(db.String(20))
-    email = db.Column(db.String(100))
+    # Thông tin đặc thù của employee
+    position = db.Column(db.String(50), default='Kỹ thuật viên')
+    department = db.Column(db.String(50), default='Dịch vụ')
+    # Soft delete
+    active = db.Column(db.Boolean, default=True)
     bookings = db.relationship('Booking', backref='employee', lazy=True)
 
 
