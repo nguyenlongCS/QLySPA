@@ -272,6 +272,79 @@ def get_all_accounts():
         return jsonify({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'}), 500
 
 
+# API MỚI: CẬP NHẬT THÔNG TIN TÀI KHOẢN
+@app.route('/api/auth/accounts/<account_id>', methods=['PUT'])
+@admin_required
+@handle_errors
+def update_account(account_id):
+    """Cập nhật thông tin tài khoản - chỉ admin"""
+    data = request.get_json()
+
+    # Tìm tài khoản theo ID
+    account = Account.query.filter_by(accountId=account_id).first()
+    if not account:
+        return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
+
+    # Cập nhật thông tin cơ bản
+    if 'fullName' in data:
+        account.fullName = data['fullName']
+    if 'phone' in data:
+        # Validate phone
+        phone = data['phone']
+        if phone and not re.fullmatch(r'\d{9,11}', phone):
+            return jsonify({
+                'success': False,
+                'message': 'Số điện thoại không hợp lệ (chỉ gồm 9–11 chữ số)'
+            }), 400
+        account.phone = phone
+    if 'email' in data:
+        account.email = data['email']
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Cập nhật thông tin tài khoản thành công',
+        'data': dao.get_account_info_by_role(account)
+    }), 200
+
+
+# API MỚI: XÓA TÀI KHOẢN
+@app.route('/api/auth/accounts/<account_id>', methods=['DELETE'])
+@admin_required
+@handle_errors
+def delete_account(account_id):
+    """Xóa tài khoản - chỉ admin"""
+    # Tìm tài khoản theo ID
+    account = Account.query.filter_by(accountId=account_id).first()
+    if not account:
+        return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
+
+    # Kiểm tra nếu là employee có booking
+    if account.role == 'Employee' and account.employee:
+        bookings = Booking.query.filter_by(employeeId=account.employee.employeeId).all()
+        if bookings:
+            return jsonify({
+                'success': False,
+                'message': 'Không thể xóa tài khoản này vì nhân viên đang có lịch booking'
+            }), 400
+
+    # Soft delete customer/employee records
+    if account.customer:
+        account.customer.active = False
+    if account.employee:
+        account.employee.active = False
+
+    # Xóa account
+    db.session.delete(account)
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Xóa tài khoản thành công'
+    }), 200
+
+
 # CUSTOMER APIs
 
 @app.route('/api/customers', methods=['POST'])
@@ -435,7 +508,7 @@ def get_employee(employeeId):
 
     # Tìm account tương ứng với employee này
     account = Account.query.filter_by(employeeId=employee.employeeId).first()
-    if account:
+    if (account):
         employee_info.update({
             'name': account.fullName or '',
             'phone': account.phone or '',
