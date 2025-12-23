@@ -14,13 +14,53 @@
             <li><a href="{{ url_for('about') }}">Giới Thiệu</a></li>
             <li><a href="{{ url_for('contact') }}">Liên Hệ</a></li>
             <li><a href="{{ url_for('feedback') }}">Feedback</a></li>
-            <li>
         </ul>
 
         <div class="header-btn">
-            <a href="{{ url_for('booking') }}" class="btn-primary">
-                ĐẶT LỊCH NGAY
-            </a>
+            <!-- Luôn hiển thị nút đặt lịch -->
+            <a href="{{ url_for('booking') }}" class="btn-primary">ĐẶT LỊCH NGAY</a>
+
+            <!-- Hiển thị nút đăng nhập khi chưa đăng nhập -->
+            <div id="guest-menu" style="display: inline-block;">
+                <a href="{{ url_for('login') }}" class="btn-primary" style="margin-left: 10px;">Đăng nhập</a>
+            </div>
+
+            <!-- Hiển thị nút đăng xuất khi đã đăng nhập -->
+            <div id="user-menu" style="display: none;">
+                <button id="logout-header" class="btn-primary" style="margin-left: 10px; background: transparent; border: 1px solid white;">Đăng xuất</button>
+            </div>
         </div>
     </nav>
 </header>
+
+<script>
+// Kiểm tra trạng thái đăng nhập trong header
+document.addEventListener('DOMContentLoaded', function() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userInfo = localStorage.getItem('userInfo');
+
+    if (isLoggedIn && userInfo) {
+        try {
+            const user = JSON.parse(userInfo);
+            document.getElementById('user-menu').style.display = 'inline-block';
+            document.getElementById('guest-menu').style.display = 'none';
+        } catch (error) {
+            // Nếu có lỗi parse, reset trạng thái đăng nhập
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userInfo');
+        }
+    }
+
+    // Xử lý đăng xuất từ header
+    const logoutBtn = document.getElementById('logout-header');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            if (confirm('Bạn có chắc muốn đăng xuất?')) {
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userInfo');
+                window.location.href = '{{ url_for("home") }}';
+            }
+        });
+    }
+});
+</script>

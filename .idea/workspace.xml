@@ -5,20 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="86ff86b1-49f1-4524-9c9a-ccd3b3f3ce8e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/account_dao.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/booking_dao.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/customer_dao.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/employee_dao.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/invoice_dao.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/service_dao.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/settings_dao.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dao/utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/templates/pages/login.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/templates/pages/register.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.py" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/static/js/contact.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/static/js/contact.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/templates/includes/header.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/templates/includes/header.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/templates/layouts/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/templates/layouts/base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/templates/pages/booking.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/templates/pages/booking.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/instance/spa_booking.db" beforeDir="false" afterPath="$PROJECT_DIR$/instance/spa_booking.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,14 +61,14 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;Long&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/thanh/PycharmProjects/QLySPA&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "Tri",
+    "last_opened_file_path": "C:/Users/thanh/PycharmProjects/QLySPA"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\thanh\PycharmProjects\QLySPA" />

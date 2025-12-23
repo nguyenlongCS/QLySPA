@@ -1,109 +1,710 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Đặt Lịch Spa</title>
-</head>
-<body>
+{% extends 'layouts/base.html' %}
 
-    <section class="booking-container">
-        <h1>ĐẶT LỊCH</h1>
-        <p>Chỉ một bước đặt lịch, bạn sẽ có ngay trải nghiệm tuyệt vời tại OU Spa.</p>
+{% block title %}Đặt Lịch | OU Spa{% endblock %}
 
-        <form id="spaBookingForm">
+{% block page_css %}
+<style>
+/* Header style cho booking page - giống about/contact/feedback */
+.booking-page header nav {
+    padding: 8px 30px;
+}
+.booking-page header {
+    background: #eee2ca;
+    position: sticky;
+    top: 0px;
+    z-index: 999;
+    height: 100px;
+}
+
+/* Menu chữ đen */
+.booking-page header nav a {
+    color: #222 !important;
+}
+
+/* Hover */
+.booking-page header nav a:hover {
+    color: #c8a24a;
+}
+
+/* Gạch chân tinh tế */
+.booking-page header nav a::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 0;
+    height: 1px;
+    background: #0e0e0e;
+    transform: translateX(-50%);
+    transition: width 0.2s ease;
+    pointer-events: none;
+}
+
+/* Nút ĐẶT LỊCH và các nút khác */
+.booking-page .btn-primary {
+    background: transparent;
+    color: #222;
+    border: 1px solid #222;
+}
+
+.booking-page .btn-primary:hover {
+    background: #c8a24a;
+    color: #fff;
+    border-color: #c8a24a;
+}
+
+/* Container styling */
+.booking-container {
+    max-width: 800px;
+    margin: 80px auto 60px;
+    padding: 40px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.booking-container h1 {
+    text-align: center;
+    font-size: 36px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.booking-container p {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #666;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input[type="time"] {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    cursor: pointer;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 4px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #c8a165;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.radio-group {
+    display: flex;
+    gap: 20px;
+    margin-top: 8px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+}
+
+button[type="submit"] {
+    width: 100%;
+    padding: 15px;
+    background: #c8a165;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+button[type="submit"]:hover {
+    background: #b8944f;
+}
+
+button[type="submit"]:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.error-message {
+    color: #e53935;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border: 1px solid #c3e6cb;
+}
+
+.login-required {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    margin: 40px 0;
+}
+
+.login-required h3 {
+    color: #856404;
+    margin-bottom: 15px;
+}
+
+.login-required p {
+    color: #856404;
+    margin-bottom: 20px;
+}
+
+.btn-auth {
+    display: inline-block;
+    background: #c8a165;
+    color: white;
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.btn-auth:hover {
+    background: #b8944f;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block body_class %}booking-page{% endblock %}
+
+{% block content %}
+<section class="booking-container">
+    <h1>ĐẶT LỊCH</h1>
+    <p>Chỉ một bước đặt lịch, bạn sẽ có ngay trải nghiệm tuyệt vời tại OU Spa.</p>
+
+    <div id="success-message" class="success-message" style="display: none;"></div>
+
+    <!-- Thông báo yêu cầu đăng nhập -->
+    <div id="login-required" class="login-required">
+        <h3>Vui lòng đăng nhập để đặt lịch</h3>
+        <p>Để đảm bảo thông tin đặt lịch chính xác và quản lý lịch hẹn của bạn, vui lòng đăng nhập trước khi đặt lịch.</p>
+        <a href="{{ url_for('login') }}?return={{ url_for('booking') }}" class="btn-auth">Đăng nhập ngay</a>
+        <p style="margin-top: 15px;">Chưa có tài khoản? <a href="{{ url_for('register') }}">Đăng ký tại đây</a></p>
+    </div>
+
+    <!-- Form đặt lịch - chỉ hiển thị khi đã đăng nhập -->
+    <form id="spaBookingForm" style="display: none;">
+        <div class="form-row">
             <div class="form-group">
                 <label for="name">Họ tên *</label>
                 <input type="text" id="name" name="name" required placeholder="Nhập họ tên của bạn">
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" placeholder="Địa chỉ email (không bắt buộc)">
+                <div class="error-message" id="name-error"></div>
             </div>
 
             <div class="form-group">
                 <label for="phone">Số điện thoại *</label>
                 <input type="tel" id="phone" name="phone" required pattern="[0-9]{9,11}" placeholder="Số điện thoại từ 9-11 số">
+                <div class="error-message" id="phone-error"></div>
             </div>
+        </div>
 
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="Địa chỉ email (không bắt buộc)">
+            <div class="error-message" id="email-error"></div>
+        </div>
+
+        <div class="form-row">
             <div class="form-group">
                 <label for="servicesId">Dịch vụ *</label>
                 <select id="servicesId" name="servicesId" required>
                     <option value="">-- Chọn dịch vụ --</option>
-                    <option value="S01">Massage Body (60 phút)</option>
-                    <option value="S02">Chăm sóc da mặt (45 phút)</option>
                 </select>
+                <div class="error-message" id="service-error"></div>
             </div>
 
             <div class="form-group">
                 <label for="employeeId">Kỹ thuật viên *</label>
                 <select id="employeeId" name="employeeId" required>
                     <option value="">-- Chọn nhân viên --</option>
-                    <option value="E01">Nhân viên Lan</option>
-                    <option value="E02">Nhân viên Hồng</option>
                 </select>
+                <div class="error-message" id="employee-error"></div>
             </div>
+        </div>
 
+        <div class="form-row">
             <div class="form-group">
                 <label for="bookingDate">Ngày đặt *</label>
                 <input type="date" id="bookingDate" required>
+                <div class="error-message" id="date-error"></div>
             </div>
 
             <div class="form-group">
-                <label for="bookingTime">Khung giờ *</label>
-                <select id="bookingTime" required>
+                <label for="bookingTime">Thời gian *</label>
+                <select id="bookingTime" name="bookingTime" required>
+                    <option value="">-- Chọn thời gian --</option>
+                    <option value="07:00:00">07:00</option>
+                    <option value="08:00:00">08:00</option>
                     <option value="09:00:00">09:00</option>
                     <option value="10:00:00">10:00</option>
+                    <option value="11:00:00">11:00</option>
+                    <option value="12:00:00">12:00</option>
+                    <option value="13:00:00">13:00</option>
                     <option value="14:00:00">14:00</option>
+                    <option value="15:00:00">15:00</option>
                     <option value="16:00:00">16:00</option>
+                    <option value="17:00:00">17:00</option>
+                    <option value="18:00:00">18:00</option>
+                    <option value="19:00:00">19:00</option>
+                    <option value="20:00:00">20:00</option>
+                    <option value="21:00:00">21:00</option>
+                    <option value="22:00:00">22:00</option>
+                    <option value="custom">Nhập</option>
                 </select>
+
+                <!-- Input ẩn cho nhập tay -->
+                <input type="text" id="customTime" name="customTime"
+                       placeholder="VD: 07:30, 15:45"
+                       style="display: none; margin-top: 8px;"
+                       pattern="^([0-1]?[0-9]|2[0-2]):[0-5][0-9]$">
+
+                <small style="color: #666; font-size: 12px;">Giờ hoạt động: 7:00 - 22:00</small>
+                <div class="error-message" id="time-error"></div>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label>Bạn đã từng đến Spa chưa?</label><br>
-                <input type="radio" name="old_customer" value="yes"> Có
-                <input type="radio" name="old_customer" value="no"> Chưa
+        <div class="form-group">
+            <label>Bạn đã từng đến Spa chưa?</label>
+            <div class="radio-group">
+                <label><input type="radio" name="old_customer" value="yes"> Có</label>
+                <label><input type="radio" name="old_customer" value="no"> Chưa</label>
             </div>
+        </div>
 
-            <div class="form-group">
-                <label for="note">Yêu cầu bổ sung thêm</label><br>
-                <textarea id="note" name="note" rows="4" placeholder="Ví dụ: Bạn yêu cầu thêm về KTV nam/nữ..."></textarea>
-            </div>
+        <div class="form-group">
+            <label for="note">Yêu cầu bổ sung</label>
+            <textarea id="note" name="note" rows="3" placeholder="Ví dụ: Yêu cầu kỹ thuật viên nam/nữ, phòng yên tĩnh..."></textarea>
+        </div>
 
-            <div class="form-group">
-                <label for="discount">Mã giảm giá</label>
-                <input type="text" id="discount" name="discount" placeholder="Nhập mã nếu có">
-            </div>
+        <button type="submit" id="submitBtn">ĐẶT LỊCH</button>
+    </form>
+</section>
 
-            <button type="submit" id="submitBtn">ĐẶT LỊCH</button>
-        </form>
-    </section>
+<script>
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
+let currentUser = null;
 
-    <script>
-        document.getElementById('spaBookingForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+document.addEventListener('DOMContentLoaded', function() {
+    // Kiểm tra trạng thái đăng nhập
+    checkLoginStatus();
+});
 
-            
-            const date = document.getElementById('bookingDate').value;
-            const time = document.getElementById('bookingTime').value;
-            
-        
-            const fullDateTime = `${date}T${time}`;
+function checkLoginStatus() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userInfo = localStorage.getItem('userInfo');
 
-           
-            const bookingData = {
-                bookingId: "BK-" + Date.now(), 
-                customerId: "C-GUEST",         
-                servicesId: document.getElementById('servicesId').value,
-                employeeId: document.getElementById('employeeId').value,
-                time: fullDateTime,
-                status: "Đã xác nhận"
-            };
+    if (!isLoggedIn || !userInfo) {
+        // Chưa đăng nhập - hiển thị thông báo yêu cầu đăng nhập và ẩn form
+        document.getElementById('login-required').style.display = 'block';
+        document.getElementById('spaBookingForm').style.display = 'none';
+        return;
+    }
 
-            console.log("Dữ liệu gửi về Backend:", bookingData);
-            alert("Đã gom dữ liệu xong! Sẵn sàng gửi đến Flask.");
+    try {
+        currentUser = JSON.parse(userInfo);
+
+        // Tự động điền thông tin vào form (nhưng có thể chỉnh sửa)
+        document.getElementById('name').value = currentUser.name || '';
+        document.getElementById('phone').value = currentUser.phone || '';
+        document.getElementById('email').value = currentUser.email || '';
+
+        // Ẩn thông báo yêu cầu đăng nhập và hiển thị form
+        document.getElementById('login-required').style.display = 'none';
+        document.getElementById('spaBookingForm').style.display = 'block';
+
+        // Load dữ liệu cho form
+        loadServices();
+        loadEmployees();
+
+        // Setup time selection handler
+        setupTimeSelection();
+
+        // Đặt ngày tối thiểu là ngày hôm nay
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('bookingDate').min = today;
+
+    } catch (error) {
+        console.error('Lỗi parse user info:', error);
+        logout();
+    }
+}
+
+// Xử lý đăng xuất (từ header hoặc các nơi khác nếu có)
+function logout() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userInfo');
+    currentUser = null;
+    window.location.reload();
+}
+
+// Load danh sách dịch vụ từ API
+async function loadServices() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/services`);
+        const result = await response.json();
+
+        if (result.success) {
+            const serviceSelect = document.getElementById('servicesId');
+            serviceSelect.innerHTML = '<option value="">-- Chọn dịch vụ --</option>';
+
+            result.data.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service.servicesId;
+                option.textContent = `${service.name} (${service.durration} phút - ${service.price.toLocaleString()}đ)`;
+                serviceSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải dịch vụ:', error);
+    }
+}
+
+// Load danh sách nhân viên từ API
+async function loadEmployees() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/employees`);
+        const result = await response.json();
+
+        if (result.success) {
+            const employeeSelect = document.getElementById('employeeId');
+            employeeSelect.innerHTML = '<option value="">-- Chọn nhân viên --</option>';
+
+            result.data.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee.employeeId;
+                option.textContent = employee.name;
+                employeeSelect.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải nhân viên:', error);
+    }
+}
+
+// Xử lý chuyển đổi giữa select time và input tay
+function setupTimeSelection() {
+    const timeSelect = document.getElementById('bookingTime');
+    const customTimeInput = document.getElementById('customTime');
+
+    timeSelect.addEventListener('change', function() {
+        if (this.value === 'custom') {
+            // Hiển thị input tay
+            customTimeInput.style.display = 'block';
+            customTimeInput.required = true;
+            this.required = false;
+            customTimeInput.focus();
+        } else {
+            // Ẩn input tay
+            customTimeInput.style.display = 'none';
+            customTimeInput.required = false;
+            this.required = true;
+            customTimeInput.value = '';
+            clearError('time-error');
+        }
+    });
+
+    // Validate input tay khi nhập
+    customTimeInput.addEventListener('input', function() {
+        const timeValue = this.value.trim();
+        if (timeValue) {
+            const timePattern = /^([0-1]?[0-9]|2[0-2]):([0-5][0-9])$/;
+            if (timePattern.test(timeValue)) {
+                const [hours, minutes] = timeValue.split(':').map(Number);
+                if (hours >= 7 && hours <= 22) {
+                    clearError('time-error');
+                } else {
+                    showError('time-error', 'Thời gian phải từ 7:00 đến 22:00');
+                }
+            } else {
+                showError('time-error', 'Định dạng thời gian không đúng (VD: 07:30)');
+            }
+        }
+    });
+}
+
+// Xử lý submit form
+document.getElementById('spaBookingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // Kiểm tra bắt buộc đăng nhập
+    if (!currentUser || !currentUser.customerId) {
+        alert('Vui lòng đăng nhập để đặt lịch');
+        window.location.href = '{{ url_for("login") }}?return={{ url_for("booking") }}';
+        return;
+    }
+
+    // Reset error messages
+    clearErrors();
+
+    // Validate form
+    if (!validateForm()) {
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Đang xử lý...';
+
+    try {
+        // Tạo booking với customerId từ user đăng nhập
+        await createBooking(currentUser.customerId);
+
+    } catch (error) {
+        console.error('Lỗi:', error);
+        alert('Có lỗi xảy ra: ' + error.message);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'ĐẶT LỊCH';
+    }
+});
+
+// Tạo booking - sử dụng thông tin từ form
+async function createBooking(baseCustomerId) {
+    // Lấy thông tin từ form (có thể đã được user chỉnh sửa)
+    const customerData = {
+        customerId: baseCustomerId,
+        name: document.getElementById('name').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim()
+    };
+
+    // Cập nhật thông tin customer nếu có thay đổi
+    try {
+        const updateResponse = await fetch(`${API_BASE_URL}/customers/${baseCustomerId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: customerData.name,
+                phone: customerData.phone,
+                email: customerData.email
+            })
         });
-    </script>
 
-</body>
-</html>
+        if (!updateResponse.ok) {
+            console.log('Không thể cập nhật thông tin customer, nhưng tiếp tục tạo booking');
+        }
+    } catch (error) {
+        console.log('Lỗi cập nhật customer:', error);
+    }
+
+    const date = document.getElementById('bookingDate').value;
+    const finalTime = document.getElementById('bookingTime').getAttribute('data-final-time');
+    const fullDateTime = `${date}T${finalTime}`;
+
+    const bookingData = {
+        bookingId: 'BK' + Date.now().toString().slice(-8),
+        customerId: baseCustomerId,
+        servicesId: document.getElementById('servicesId').value,
+        employeeId: document.getElementById('employeeId').value,
+        time: fullDateTime,
+        status: 'Đã xác nhận'
+    };
+
+    const response = await fetch(`${API_BASE_URL}/bookings`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(bookingData)
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+        throw new Error(result.message || 'Không thể đặt lịch');
+    }
+
+    // Hiển thị thông báo thành công
+    showSuccess('Đặt lịch thành công! Cảm ơn bạn đã sử dụng dịch vụ OU Spa.');
+
+    // Reset form (chỉ reset các field không phải thông tin cá nhân)
+    document.getElementById('servicesId').value = '';
+    document.getElementById('employeeId').value = '';
+    document.getElementById('bookingDate').value = '';
+    document.getElementById('bookingTime').value = '';
+    document.getElementById('customTime').value = '';
+    document.getElementById('customTime').style.display = 'none';
+    document.getElementById('bookingTime').required = true;
+    document.getElementById('customTime').required = false;
+    if (document.getElementById('note')) {
+        document.getElementById('note').value = '';
+    }
+
+    // Đặt lại ngày tối thiểu
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('bookingDate').min = today;
+}
+
+// Validate form
+function validateForm() {
+    let isValid = true;
+
+    // Validate tên
+    const name = document.getElementById('name').value.trim();
+    if (!name) {
+        showError('name-error', 'Vui lòng nhập họ tên');
+        isValid = false;
+    }
+
+    // Validate phone
+    const phone = document.getElementById('phone').value.trim();
+    if (!phone) {
+        showError('phone-error', 'Vui lòng nhập số điện thoại');
+        isValid = false;
+    } else if (!/^\d{9,11}$/.test(phone)) {
+        showError('phone-error', 'Số điện thoại phải có 9-11 chữ số');
+        isValid = false;
+    }
+
+    // Validate service
+    if (!document.getElementById('servicesId').value) {
+        showError('service-error', 'Vui lòng chọn dịch vụ');
+        isValid = false;
+    }
+
+    // Validate employee
+    if (!document.getElementById('employeeId').value) {
+        showError('employee-error', 'Vui lòng chọn kỹ thuật viên');
+        isValid = false;
+    }
+
+    // Validate date
+    const bookingDate = document.getElementById('bookingDate').value;
+    if (!bookingDate) {
+        showError('date-error', 'Vui lòng chọn ngày đặt lịch');
+        isValid = false;
+    } else {
+        const selectedDate = new Date(bookingDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+            showError('date-error', 'Không thể đặt lịch trong quá khứ');
+            isValid = false;
+        }
+    }
+
+    // Validate time
+    const timeSelect = document.getElementById('bookingTime');
+    const customTimeInput = document.getElementById('customTime');
+    let finalTime = null;
+
+    if (timeSelect.value === 'custom') {
+        // Validate custom time input
+        const customTime = customTimeInput.value.trim();
+        if (!customTime) {
+            showError('time-error', 'Vui lòng nhập thời gian');
+            isValid = false;
+        } else {
+            const timePattern = /^([0-1]?[0-9]|2[0-2]):([0-5][0-9])$/;
+            if (!timePattern.test(customTime)) {
+                showError('time-error', 'Định dạng thời gian không đúng (VD: 07:30)');
+                isValid = false;
+            } else {
+                const [hours, minutes] = customTime.split(':').map(Number);
+                if (hours < 7 || hours > 22) {
+                    showError('time-error', 'Thời gian phải từ 7:00 đến 22:00');
+                    isValid = false;
+                } else {
+                    // Chuyển đổi định dạng cho API
+                    finalTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+                }
+            }
+        }
+    } else {
+        // Validate select option
+        if (!timeSelect.value) {
+            showError('time-error', 'Vui lòng chọn thời gian');
+            isValid = false;
+        } else {
+            finalTime = timeSelect.value;
+        }
+    }
+
+    // Lưu finalTime để sử dụng trong createBooking
+    if (finalTime) {
+        document.getElementById('bookingTime').setAttribute('data-final-time', finalTime);
+    }
+
+    return isValid;
+}
+
+// Hiển thị lỗi
+function showError(elementId, message) {
+    document.getElementById(elementId).textContent = message;
+}
+
+// Xóa lỗi cụ thể
+function clearError(elementId) {
+    document.getElementById(elementId).textContent = '';
+}
+
+// Xóa tất cả thông báo lỗi
+function clearErrors() {
+    const errorElements = document.querySelectorAll('.error-message');
+    errorElements.forEach(el => el.textContent = '');
+}
+
+// Hiển thị thông báo thành công
+function showSuccess(message) {
+    const successEl = document.getElementById('success-message');
+    successEl.textContent = message;
+    successEl.style.display = 'block';
+    
+    // Cuộn lên đầu trang để xem thông báo
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Ẩn thông báo sau 5 giây
+    setTimeout(() => {
+        successEl.style.display = 'none';
+    }, 5000);
+}
+</script>
+{% endblock %}
