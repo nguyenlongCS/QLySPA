@@ -188,7 +188,7 @@
 <div class="auth-container">
     <div class="auth-box">
         <h1>Đăng Nhập</h1>
-        <p>Đăng nhập để đặt lịch spa tại OU Spa</p>
+        <p>Đăng nhập để sử dụng dịch vụ tại OU Spa</p>
 
         <div id="success-message" class="success-message" style="display: none;"></div>
         <div id="alert-message" class="alert-message" style="display: none;"></div>
@@ -257,10 +257,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
 
             showSuccess('Đăng nhập thành công! Đang chuyển hướng...');
 
-            // Chuyển hướng sau 1.5 giây
+            // Chuyển hướng theo role sau 1.5 giây
             setTimeout(() => {
-                const returnUrl = new URLSearchParams(window.location.search).get('return') || '/';
-                window.location.href = returnUrl;
+                redirectByRole(result.data.role);
             }, 1500);
 
         } else {
@@ -275,6 +274,31 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         loginBtn.textContent = 'ĐĂNG NHẬP';
     }
 });
+
+function redirectByRole(role) {
+    const returnUrl = new URLSearchParams(window.location.search).get('return');
+
+    // Nếu có return URL cụ thể, ưu tiên sử dụng
+    if (returnUrl) {
+        window.location.href = returnUrl;
+        return;
+    }
+
+    // Chuyển hướng theo role
+    switch(role) {
+        case 'Customer':
+            window.location.href = '/';
+            break;
+        case 'Employee':
+            window.location.href = '/employee';
+            break;
+        case 'Admin':
+            window.location.href = '/admin';
+            break;
+        default:
+            window.location.href = '/';
+    }
+}
 
 function validateForm() {
     let isValid = true;
@@ -320,10 +344,16 @@ function clearMessages() {
     document.getElementById('alert-message').style.display = 'none';
 }
 
-// Kiểm tra nếu đã đăng nhập thì chuyển hướng
-if (localStorage.getItem('isLoggedIn') === 'true') {
-    const returnUrl = new URLSearchParams(window.location.search).get('return') || '/';
-    window.location.href = returnUrl;
+// Kiểm tra nếu đã đăng nhập thì chuyển hướng theo role
+const currentUser = localStorage.getItem('userInfo');
+if (localStorage.getItem('isLoggedIn') === 'true' && currentUser) {
+    try {
+        const user = JSON.parse(currentUser);
+        redirectByRole(user.role);
+    } catch (error) {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userInfo');
+    }
 }
 </script>
 {% endblock %}

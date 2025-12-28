@@ -35,3 +35,17 @@ def update_account_password(username, new_password_hash):
         db.session.commit()
         return True
     return False
+
+def get_all_accounts():
+    """Lấy tất cả tài khoản"""
+    return Account.query.all()
+
+
+def update_account_role(username, new_role):
+    """Cập nhật role tài khoản"""
+    account = Account.query.filter_by(username=username).first()
+    if account:
+        account.role = new_role
+        db.session.commit()
+        return True
+    return False

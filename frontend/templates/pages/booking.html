@@ -4,7 +4,7 @@
 
 {% block page_css %}
 <style>
-/* Header style cho booking page - giống about/contact/feedback */
+/* Header style cho booking page */
 .booking-page header nav {
     padding: 8px 30px;
 }
@@ -16,17 +16,14 @@
     height: 100px;
 }
 
-/* Menu chữ đen */
 .booking-page header nav a {
     color: #222 !important;
 }
 
-/* Hover */
 .booking-page header nav a:hover {
     color: #c8a24a;
 }
 
-/* Gạch chân tinh tế */
 .booking-page header nav a::after {
     content: "";
     position: absolute;
@@ -40,7 +37,6 @@
     pointer-events: none;
 }
 
-/* Nút ĐẶT LỊCH và các nút khác */
 .booking-page .btn-primary {
     background: transparent;
     color: #222;
@@ -55,7 +51,7 @@
 
 /* Container styling */
 .booking-container {
-    max-width: 800px;
+    max-width: 1000px;
     margin: 80px auto 60px;
     padding: 40px;
     background: #f9f9f9;
@@ -75,6 +71,43 @@
     color: #666;
 }
 
+/* Tab Navigation */
+.tab-nav {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 15px 30px;
+    font-size: 16px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+.tab-btn.active {
+    color: #c8a165;
+    border-bottom-color: #c8a165;
+    font-weight: 600;
+}
+
+.tab-btn:hover {
+    color: #c8a165;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Form styles */
 .form-group {
     margin-bottom: 20px;
 }
@@ -94,16 +127,6 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
-}
-
-.form-group input[type="time"] {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    cursor: pointer;
-}
-
-.form-group small {
-    display: block;
-    margin-top: 4px;
 }
 
 .form-group input:focus,
@@ -203,8 +226,131 @@ button[type="submit"]:disabled {
     color: white;
 }
 
+/* Booking list styles */
+.booking-list {
+    margin-top: 20px;
+}
+
+.booking-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.booking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.booking-id {
+    font-weight: 600;
+    color: #333;
+    margin-right: 20px;
+}
+
+.booking-status {
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-confirmed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-accepted {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-rejected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.booking-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.booking-field {
+    font-size: 14px;
+}
+
+.booking-field strong {
+    display: block;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.booking-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-cancel {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-cancel:hover {
+    background: #c82333;
+}
+
+.btn-cancel:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+.no-bookings {
+    text-align: center;
+    color: #666;
+    padding: 40px;
+    background: white;
+    border-radius: 8px;
+}
+
 @media (max-width: 768px) {
     .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .tab-nav {
+        flex-direction: column;
+    }
+
+    .booking-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .booking-details {
         grid-template-columns: 1fr;
     }
 }
@@ -222,108 +368,132 @@ button[type="submit"]:disabled {
 
     <!-- Thông báo yêu cầu đăng nhập -->
     <div id="login-required" class="login-required">
-        <h3>Vui lòng đăng nhập để đặt lịch</h3>
-        <p>Để đảm bảo thông tin đặt lịch chính xác và quản lý lịch hẹn của bạn, vui lòng đăng nhập trước khi đặt lịch.</p>
+        <h3>Vui lòng đăng nhập để sử dụng dịch vụ đặt lịch</h3>
+        <p>Để đảm bảo thông tin đặt lịch chính xác và quản lý lịch hẹn của bạn, vui lòng đăng nhập trước.</p>
         <a href="{{ url_for('login') }}?return={{ url_for('booking') }}" class="btn-auth">Đăng nhập ngay</a>
         <p style="margin-top: 15px;">Chưa có tài khoản? <a href="{{ url_for('register') }}">Đăng ký tại đây</a></p>
     </div>
 
-    <!-- Form đặt lịch - chỉ hiển thị khi đã đăng nhập -->
-    <form id="spaBookingForm" style="display: none;">
-        <div class="form-row">
-            <div class="form-group">
-                <label for="name">Họ tên *</label>
-                <input type="text" id="name" name="name" required placeholder="Nhập họ tên của bạn">
-                <div class="error-message" id="name-error"></div>
-            </div>
+    <!-- Tab navigation - chỉ hiển thị khi đã đăng nhập -->
+    <div id="user-content" style="display: none;">
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="showTab('new-booking')">Đặt Lịch Mới</button>
+            <button class="tab-btn" onclick="showTab('current-bookings')">Lịch Hiện Tại</button>
+            <button class="tab-btn" onclick="showTab('booking-history')">Lịch Sử</button>
+        </div>
 
-            <div class="form-group">
-                <label for="phone">Số điện thoại *</label>
-                <input type="tel" id="phone" name="phone" required pattern="[0-9]{9,11}" placeholder="Số điện thoại từ 9-11 số">
-                <div class="error-message" id="phone-error"></div>
+        <!-- Tab: Đặt lịch mới -->
+        <div id="new-booking" class="tab-content active">
+            <form id="spaBookingForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Họ tên *</label>
+                        <input type="text" id="name" name="name" required placeholder="Nhập họ tên của bạn">
+                        <div class="error-message" id="name-error"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Số điện thoại *</label>
+                        <input type="tel" id="phone" name="phone" required pattern="[0-9]{9,11}" placeholder="Số điện thoại từ 9-11 số">
+                        <div class="error-message" id="phone-error"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" placeholder="Địa chỉ email (không bắt buộc)">
+                    <div class="error-message" id="email-error"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="servicesId">Dịch vụ *</label>
+                        <select id="servicesId" name="servicesId" required>
+                            <option value="">-- Chọn dịch vụ --</option>
+                        </select>
+                        <div class="error-message" id="service-error"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="employeeId">Kỹ thuật viên *</label>
+                        <select id="employeeId" name="employeeId" required>
+                            <option value="">-- Chọn nhân viên --</option>
+                        </select>
+                        <div class="error-message" id="employee-error"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bookingDate">Ngày đặt *</label>
+                        <input type="date" id="bookingDate" required>
+                        <div class="error-message" id="date-error"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bookingTime">Thời gian *</label>
+                        <select id="bookingTime" name="bookingTime" required>
+                            <option value="">-- Chọn thời gian --</option>
+                            <option value="07:00:00">07:00</option>
+                            <option value="08:00:00">08:00</option>
+                            <option value="09:00:00">09:00</option>
+                            <option value="10:00:00">10:00</option>
+                            <option value="11:00:00">11:00</option>
+                            <option value="12:00:00">12:00</option>
+                            <option value="13:00:00">13:00</option>
+                            <option value="14:00:00">14:00</option>
+                            <option value="15:00:00">15:00</option>
+                            <option value="16:00:00">16:00</option>
+                            <option value="17:00:00">17:00</option>
+                            <option value="18:00:00">18:00</option>
+                            <option value="19:00:00">19:00</option>
+                            <option value="20:00:00">20:00</option>
+                            <option value="21:00:00">21:00</option>
+                            <option value="22:00:00">22:00</option>
+                            <option value="custom">Nhập</option>
+                        </select>
+
+                        <input type="text" id="customTime" name="customTime"
+                               placeholder="VD: 07:30, 15:45"
+                               style="display: none; margin-top: 8px;"
+                               pattern="^([0-1]?[0-9]|2[0-2]):[0-5][0-9]$">
+
+                        <small style="color: #666; font-size: 12px;">Giờ hoạt động: 7:00 - 22:00</small>
+                        <div class="error-message" id="time-error"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Bạn đã từng đến Spa chưa?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="old_customer" value="yes"> Có</label>
+                        <label><input type="radio" name="old_customer" value="no"> Chưa</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="note">Yêu cầu bổ sung</label>
+                    <textarea id="note" name="note" rows="3" placeholder="Ví dụ: Yêu cầu kỹ thuật viên nam/nữ, phòng yên tĩnh..."></textarea>
+                </div>
+
+                <button type="submit" id="submitBtn">ĐẶT LỊCH</button>
+            </form>
+        </div>
+
+        <!-- Tab: Lịch hiện tại -->
+        <div id="current-bookings" class="tab-content">
+            <div class="booking-list" id="current-booking-list">
+                <div class="no-bookings">Đang tải...</div>
             </div>
         </div>
 
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" placeholder="Địa chỉ email (không bắt buộc)">
-            <div class="error-message" id="email-error"></div>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="servicesId">Dịch vụ *</label>
-                <select id="servicesId" name="servicesId" required>
-                    <option value="">-- Chọn dịch vụ --</option>
-                </select>
-                <div class="error-message" id="service-error"></div>
-            </div>
-
-            <div class="form-group">
-                <label for="employeeId">Kỹ thuật viên *</label>
-                <select id="employeeId" name="employeeId" required>
-                    <option value="">-- Chọn nhân viên --</option>
-                </select>
-                <div class="error-message" id="employee-error"></div>
+        <!-- Tab: Lịch sử -->
+        <div id="booking-history" class="tab-content">
+            <div class="booking-list" id="history-booking-list">
+                <div class="no-bookings">Đang tải...</div>
             </div>
         </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="bookingDate">Ngày đặt *</label>
-                <input type="date" id="bookingDate" required>
-                <div class="error-message" id="date-error"></div>
-            </div>
-
-            <div class="form-group">
-                <label for="bookingTime">Thời gian *</label>
-                <select id="bookingTime" name="bookingTime" required>
-                    <option value="">-- Chọn thời gian --</option>
-                    <option value="07:00:00">07:00</option>
-                    <option value="08:00:00">08:00</option>
-                    <option value="09:00:00">09:00</option>
-                    <option value="10:00:00">10:00</option>
-                    <option value="11:00:00">11:00</option>
-                    <option value="12:00:00">12:00</option>
-                    <option value="13:00:00">13:00</option>
-                    <option value="14:00:00">14:00</option>
-                    <option value="15:00:00">15:00</option>
-                    <option value="16:00:00">16:00</option>
-                    <option value="17:00:00">17:00</option>
-                    <option value="18:00:00">18:00</option>
-                    <option value="19:00:00">19:00</option>
-                    <option value="20:00:00">20:00</option>
-                    <option value="21:00:00">21:00</option>
-                    <option value="22:00:00">22:00</option>
-                    <option value="custom">Nhập</option>
-                </select>
-
-                <!-- Input ẩn cho nhập tay -->
-                <input type="text" id="customTime" name="customTime"
-                       placeholder="VD: 07:30, 15:45"
-                       style="display: none; margin-top: 8px;"
-                       pattern="^([0-1]?[0-9]|2[0-2]):[0-5][0-9]$">
-
-                <small style="color: #666; font-size: 12px;">Giờ hoạt động: 7:00 - 22:00</small>
-                <div class="error-message" id="time-error"></div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Bạn đã từng đến Spa chưa?</label>
-            <div class="radio-group">
-                <label><input type="radio" name="old_customer" value="yes"> Có</label>
-                <label><input type="radio" name="old_customer" value="no"> Chưa</label>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label for="note">Yêu cầu bổ sung</label>
-            <textarea id="note" name="note" rows="3" placeholder="Ví dụ: Yêu cầu kỹ thuật viên nam/nữ, phòng yên tĩnh..."></textarea>
-        </div>
-
-        <button type="submit" id="submitBtn">ĐẶT LỊCH</button>
-    </form>
+    </div>
 </section>
 
 <script>
@@ -331,7 +501,6 @@ const API_BASE_URL = 'http://127.0.0.1:5000/api';
 let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Kiểm tra trạng thái đăng nhập
     checkLoginStatus();
 });
 
@@ -340,34 +509,53 @@ function checkLoginStatus() {
     const userInfo = localStorage.getItem('userInfo');
 
     if (!isLoggedIn || !userInfo) {
-        // Chưa đăng nhập - hiển thị thông báo yêu cầu đăng nhập và ẩn form
         document.getElementById('login-required').style.display = 'block';
-        document.getElementById('spaBookingForm').style.display = 'none';
+        document.getElementById('user-content').style.display = 'none';
         return;
     }
 
     try {
         currentUser = JSON.parse(userInfo);
 
-        // Tự động điền thông tin vào form (nhưng có thể chỉnh sửa)
+        // Tự động điền thông tin vào form
         document.getElementById('name').value = currentUser.name || '';
         document.getElementById('phone').value = currentUser.phone || '';
         document.getElementById('email').value = currentUser.email || '';
 
-        // Ẩn thông báo yêu cầu đăng nhập và hiển thị form
+        // Chuyển hướng theo role
+        if (currentUser.role === 'Employee') {
+            window.location.href = '/employee';
+            return;
+        }
+
+        if (currentUser.role === 'Admin') {
+            window.location.href = '/admin';
+            return;
+        }
+
+        // Chỉ Customer mới được ở lại trang này
+        if (currentUser.role !== 'Customer') {
+            alert('Trang này chỉ dành cho khách hàng');
+            logout();
+            return;
+        }
+
+        // Hiển thị content và ẩn thông báo đăng nhập
         document.getElementById('login-required').style.display = 'none';
-        document.getElementById('spaBookingForm').style.display = 'block';
+        document.getElementById('user-content').style.display = 'block';
 
         // Load dữ liệu cho form
         loadServices();
         loadEmployees();
-
-        // Setup time selection handler
         setupTimeSelection();
 
         // Đặt ngày tối thiểu là ngày hôm nay
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('bookingDate').min = today;
+
+        // Load booking data
+        loadCurrentBookings();
+        loadBookingHistory();
 
     } catch (error) {
         console.error('Lỗi parse user info:', error);
@@ -375,15 +563,28 @@ function checkLoginStatus() {
     }
 }
 
-// Xử lý đăng xuất (từ header hoặc các nơi khác nếu có)
-function logout() {
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userInfo');
-    currentUser = null;
-    window.location.reload();
+function showTab(tabName) {
+    // Ẩn tất cả tab content
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.remove('active'));
+
+    // Bỏ active cho tất cả tab buttons
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => btn.classList.remove('active'));
+
+    // Hiển thị tab được chọn
+    document.getElementById(tabName).classList.add('active');
+    event.target.classList.add('active');
+
+    // Load data tương ứng
+    if (tabName === 'current-bookings') {
+        loadCurrentBookings();
+    } else if (tabName === 'booking-history') {
+        loadBookingHistory();
+    }
 }
 
-// Load danh sách dịch vụ từ API
+// Load danh sách dịch vụ
 async function loadServices() {
     try {
         const response = await fetch(`${API_BASE_URL}/services`);
@@ -405,7 +606,7 @@ async function loadServices() {
     }
 }
 
-// Load danh sách nhân viên từ API
+// Load danh sách nhân viên
 async function loadEmployees() {
     try {
         const response = await fetch(`${API_BASE_URL}/employees`);
@@ -427,20 +628,18 @@ async function loadEmployees() {
     }
 }
 
-// Xử lý chuyển đổi giữa select time và input tay
+// Setup time selection
 function setupTimeSelection() {
     const timeSelect = document.getElementById('bookingTime');
     const customTimeInput = document.getElementById('customTime');
 
     timeSelect.addEventListener('change', function() {
         if (this.value === 'custom') {
-            // Hiển thị input tay
             customTimeInput.style.display = 'block';
             customTimeInput.required = true;
             this.required = false;
             customTimeInput.focus();
         } else {
-            // Ẩn input tay
             customTimeInput.style.display = 'none';
             customTimeInput.required = false;
             this.required = true;
@@ -449,7 +648,6 @@ function setupTimeSelection() {
         }
     });
 
-    // Validate input tay khi nhập
     customTimeInput.addEventListener('input', function() {
         const timeValue = this.value.trim();
         if (timeValue) {
@@ -468,21 +666,147 @@ function setupTimeSelection() {
     });
 }
 
-// Xử lý submit form
-document.getElementById('spaBookingForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
+// Load lịch hiện tại
+async function loadCurrentBookings() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings`);
+        const result = await response.json();
 
-    // Kiểm tra bắt buộc đăng nhập
-    if (!currentUser || !currentUser.customerId) {
-        alert('Vui lòng đăng nhập để đặt lịch');
-        window.location.href = '{{ url_for("login") }}?return={{ url_for("booking") }}';
+        if (result.success) {
+            const currentBookings = result.data.filter(booking => {
+                const bookingTime = new Date(booking.time);
+                const now = new Date();
+                return bookingTime >= now &&
+                       booking.status !== 'Đã hủy' &&
+                       booking.customer.customerId === currentUser.customerId;
+            });
+
+            displayBookings(currentBookings, 'current-booking-list', true);
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải lịch hiện tại:', error);
+        document.getElementById('current-booking-list').innerHTML = '<div class="no-bookings">Có lỗi xảy ra</div>';
+    }
+}
+
+// Load lịch sử
+async function loadBookingHistory() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings`);
+        const result = await response.json();
+
+        if (result.success) {
+            const pastBookings = result.data.filter(booking => {
+                const bookingTime = new Date(booking.time);
+                const now = new Date();
+                return bookingTime < now &&
+                       booking.customer.customerId === currentUser.customerId;
+            });
+
+            displayBookings(pastBookings, 'history-booking-list', false);
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải lịch sử:', error);
+        document.getElementById('history-booking-list').innerHTML = '<div class="no-bookings">Có lỗi xảy ra</div>';
+    }
+}
+
+// Hiển thị danh sách booking
+function displayBookings(bookings, containerId, showCancelButton = false) {
+    const container = document.getElementById(containerId);
+
+    if (bookings.length === 0) {
+        container.innerHTML = '<div class="no-bookings">Không có lịch đặt nào.</div>';
         return;
     }
 
-    // Reset error messages
-    clearErrors();
+    const html = bookings.map(booking => {
+        const bookingTime = new Date(booking.time);
+        const formattedDate = bookingTime.toLocaleDateString('vi-VN');
+        const formattedTime = bookingTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-    // Validate form
+        let statusClass = 'status-confirmed';
+        if (booking.status === 'Đang chờ') statusClass = 'status-pending';
+        if (booking.status === 'Chấp nhận') statusClass = 'status-accepted';
+        if (booking.status === 'Từ chối') statusClass = 'status-rejected';
+        if (booking.status === 'Đã hủy') statusClass = 'status-cancelled';
+
+        const canCancel = showCancelButton &&
+                         (booking.status === 'Đang chờ' || booking.status === 'Chấp nhận') &&
+                         bookingTime > new Date();
+
+        return `
+            <div class="booking-item">
+                <div class="booking-header">
+                    <span class="booking-id">Mã: ${booking.bookingId}</span>
+                    <span class="booking-status ${statusClass}">${booking.status}</span>
+                </div>
+                <div class="booking-details">
+                    <div class="booking-field">
+                        <strong>Kỹ thuật viên:</strong>
+                        ${booking.employee.name}
+                    </div>
+                    <div class="booking-field">
+                        <strong>Dịch vụ:</strong>
+                        ${booking.service.name}
+                    </div>
+                    <div class="booking-field">
+                        <strong>Ngày:</strong>
+                        ${formattedDate}
+                    </div>
+                    <div class="booking-field">
+                        <strong>Giờ:</strong>
+                        ${formattedTime}
+                    </div>
+                </div>
+                ${canCancel ? `
+                    <div class="booking-actions">
+                        <button class="btn-cancel" onclick="cancelBooking('${booking.bookingId}')">Hủy lịch</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+// Hủy booking
+async function cancelBooking(bookingId) {
+    if (!confirm('Bạn có chắc muốn hủy lịch đặt này?')) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: 'Đã hủy' })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            showSuccess('Hủy lịch thành công!');
+            loadCurrentBookings(); // Reload danh sách
+        } else {
+            alert('Có lỗi xảy ra: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Lỗi hủy lịch:', error);
+        alert('Có lỗi xảy ra khi hủy lịch');
+    }
+}
+
+// Xử lý submit form đặt lịch
+document.getElementById('spaBookingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (!currentUser || !currentUser.customerId) {
+        alert('Vui lòng đăng nhập để đặt lịch');
+        return;
+    }
+
+    clearErrors();
     if (!validateForm()) {
         return;
     }
@@ -492,9 +816,7 @@ document.getElementById('spaBookingForm').addEventListener('submit', async funct
     submitBtn.textContent = 'Đang xử lý...';
 
     try {
-        // Tạo booking với customerId từ user đăng nhập
         await createBooking(currentUser.customerId);
-
     } catch (error) {
         console.error('Lỗi:', error);
         alert('Có lỗi xảy ra: ' + error.message);
@@ -504,33 +826,21 @@ document.getElementById('spaBookingForm').addEventListener('submit', async funct
     }
 });
 
-// Tạo booking - sử dụng thông tin từ form
+// Tạo booking
 async function createBooking(baseCustomerId) {
-    // Lấy thông tin từ form (có thể đã được user chỉnh sửa)
-    const customerData = {
-        customerId: baseCustomerId,
-        name: document.getElementById('name').value.trim(),
-        phone: document.getElementById('phone').value.trim(),
-        email: document.getElementById('email').value.trim()
-    };
-
-    // Cập nhật thông tin customer nếu có thay đổi
+    // Cập nhật thông tin customer
     try {
-        const updateResponse = await fetch(`${API_BASE_URL}/customers/${baseCustomerId}`, {
+        await fetch(`${API_BASE_URL}/customers/${baseCustomerId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                name: customerData.name,
-                phone: customerData.phone,
-                email: customerData.email
+                name: document.getElementById('name').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                email: document.getElementById('email').value.trim()
             })
         });
-
-        if (!updateResponse.ok) {
-            console.log('Không thể cập nhật thông tin customer, nhưng tiếp tục tạo booking');
-        }
     } catch (error) {
         console.log('Lỗi cập nhật customer:', error);
     }
@@ -545,7 +855,7 @@ async function createBooking(baseCustomerId) {
         servicesId: document.getElementById('servicesId').value,
         employeeId: document.getElementById('employeeId').value,
         time: fullDateTime,
-        status: 'Đã xác nhận'
+        status: 'Đang chờ'
     };
 
     const response = await fetch(`${API_BASE_URL}/bookings`, {
@@ -561,10 +871,17 @@ async function createBooking(baseCustomerId) {
         throw new Error(result.message || 'Không thể đặt lịch');
     }
 
-    // Hiển thị thông báo thành công
-    showSuccess('Đặt lịch thành công! Cảm ơn bạn đã sử dụng dịch vụ OU Spa.');
+    showSuccess('Đặt lịch thành công! Lịch của bạn đang chờ admin xác nhận.');
 
-    // Reset form (chỉ reset các field không phải thông tin cá nhân)
+    // Reset form
+    resetBookingForm();
+
+    // Reload current bookings
+    loadCurrentBookings();
+}
+
+// Reset form đặt lịch
+function resetBookingForm() {
     document.getElementById('servicesId').value = '';
     document.getElementById('employeeId').value = '';
     document.getElementById('bookingDate').value = '';
@@ -577,7 +894,6 @@ async function createBooking(baseCustomerId) {
         document.getElementById('note').value = '';
     }
 
-    // Đặt lại ngày tối thiểu
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('bookingDate').min = today;
 }
@@ -586,14 +902,12 @@ async function createBooking(baseCustomerId) {
 function validateForm() {
     let isValid = true;
 
-    // Validate tên
     const name = document.getElementById('name').value.trim();
     if (!name) {
         showError('name-error', 'Vui lòng nhập họ tên');
         isValid = false;
     }
 
-    // Validate phone
     const phone = document.getElementById('phone').value.trim();
     if (!phone) {
         showError('phone-error', 'Vui lòng nhập số điện thoại');
@@ -603,19 +917,16 @@ function validateForm() {
         isValid = false;
     }
 
-    // Validate service
     if (!document.getElementById('servicesId').value) {
         showError('service-error', 'Vui lòng chọn dịch vụ');
         isValid = false;
     }
 
-    // Validate employee
     if (!document.getElementById('employeeId').value) {
         showError('employee-error', 'Vui lòng chọn kỹ thuật viên');
         isValid = false;
     }
 
-    // Validate date
     const bookingDate = document.getElementById('bookingDate').value;
     if (!bookingDate) {
         showError('date-error', 'Vui lòng chọn ngày đặt lịch');
@@ -631,13 +942,11 @@ function validateForm() {
         }
     }
 
-    // Validate time
     const timeSelect = document.getElementById('bookingTime');
     const customTimeInput = document.getElementById('customTime');
     let finalTime = null;
 
     if (timeSelect.value === 'custom') {
-        // Validate custom time input
         const customTime = customTimeInput.value.trim();
         if (!customTime) {
             showError('time-error', 'Vui lòng nhập thời gian');
@@ -653,13 +962,11 @@ function validateForm() {
                     showError('time-error', 'Thời gian phải từ 7:00 đến 22:00');
                     isValid = false;
                 } else {
-                    // Chuyển đổi định dạng cho API
                     finalTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
                 }
             }
         }
     } else {
-        // Validate select option
         if (!timeSelect.value) {
             showError('time-error', 'Vui lòng chọn thời gian');
             isValid = false;
@@ -668,7 +975,6 @@ function validateForm() {
         }
     }
 
-    // Lưu finalTime để sử dụng trong createBooking
     if (finalTime) {
         document.getElementById('bookingTime').setAttribute('data-final-time', finalTime);
     }
@@ -676,35 +982,37 @@ function validateForm() {
     return isValid;
 }
 
-// Hiển thị lỗi
+// Helper functions
 function showError(elementId, message) {
     document.getElementById(elementId).textContent = message;
 }
 
-// Xóa lỗi cụ thể
 function clearError(elementId) {
     document.getElementById(elementId).textContent = '';
 }
 
-// Xóa tất cả thông báo lỗi
 function clearErrors() {
     const errorElements = document.querySelectorAll('.error-message');
     errorElements.forEach(el => el.textContent = '');
 }
 
-// Hiển thị thông báo thành công
 function showSuccess(message) {
     const successEl = document.getElementById('success-message');
     successEl.textContent = message;
     successEl.style.display = 'block';
-    
-    // Cuộn lên đầu trang để xem thông báo
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Ẩn thông báo sau 5 giây
+
     setTimeout(() => {
         successEl.style.display = 'none';
     }, 5000);
+}
+
+function logout() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userInfo');
+    currentUser = null;
+    window.location.reload();
 }
 </script>
 {% endblock %}

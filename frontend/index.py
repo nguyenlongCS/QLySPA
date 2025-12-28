@@ -34,6 +34,14 @@ def login():
 def register():
     return render_template('pages/register.html')
 
+@app.route('/employee')
+def employee():
+    return render_template('pages/employee.html')
+
+@app.route('/admin')
+def admin():
+    return render_template('pages/admin.html')
+
 if __name__ == "__main__":
     app.run(
         host="127.0.0.1",
