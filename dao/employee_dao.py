@@ -16,12 +16,16 @@ def get_employee_by_id(employee_id):
     return Employee.query.get(employee_id)
 
 
+# Cập nhật dao/employee_dao.py
+
 def create_employee(data):
     """Tạo nhân viên mới"""
     employee = Employee(
         employeeId=data['employeeId'],
         name=data['name'],
-        role=data['role']
+        role=data['role'],
+        phone=data.get('phone', ''),  # THÊM PHONE
+        email=data.get('email', '')   # THÊM EMAIL
     )
     db.session.add(employee)
     db.session.commit()
@@ -34,6 +38,8 @@ def update_employee(employee_id, data):
     if employee:
         employee.name = data.get('name', employee.name)
         employee.role = data.get('role', employee.role)
+        employee.phone = data.get('phone', employee.phone)  # THÊM PHONE
+        employee.email = data.get('email', employee.email)  # THÊM EMAIL
         db.session.commit()
     return employee
 

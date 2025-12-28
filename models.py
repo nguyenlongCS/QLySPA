@@ -53,6 +53,8 @@ class Employee(db.Model):
     employeeId = db.Column(db.String(50), primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(50), nullable=False)
+    phone = db.Column(db.String(20))  # THÊM
+    email = db.Column(db.String(100))  # THÊM
     bookings = db.relationship('Booking', backref='employee', lazy=True)
 
 

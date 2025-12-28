@@ -216,6 +216,186 @@ def get_profile():
     }), 200
 
 
+@app.route('/api/auth/change-role', methods=['PUT'])
+def change_role():
+    """Đổi role tài khoản - chỉ admin"""
+    data = request.get_json()
+
+    # Validate dữ liệu đầu vào
+    if not data.get('username') or not data.get('newRole'):
+        return jsonify({'success': False, 'message': 'Thiếu username hoặc newRole'}), 400
+
+    # Validate role hợp lệ
+    valid_roles = ['Customer', 'Employee', 'Admin']
+    if data['newRole'] not in valid_roles:
+        return jsonify({'success': False, 'message': 'Role không hợp lệ'}), 400
+
+    # Kiểm tra quyền admin
+    if not data.get('adminUsername'):
+        return jsonify({'success': False, 'message': 'Thiếu thông tin admin'}), 400
+
+    admin_account = dao.get_account_by_username(data['adminUsername'])
+    if not admin_account or admin_account.role != 'Admin':
+        return jsonify({'success': False, 'message': 'Không có quyền thực hiện'}), 403
+
+    # Tìm tài khoản cần đổi role
+    target_account = dao.get_account_by_username(data['username'])
+    if not target_account:
+        return jsonify({'success': False, 'message': 'Tài khoản không tồn tại'}), 404
+
+    old_role = target_account.role
+    new_role = data['newRole']
+
+    # Nếu role không thay đổi
+    if old_role == new_role:
+        return jsonify({'success': True, 'message': 'Role không thay đổi'}), 200
+
+    # Xử lý thay đổi role
+    if old_role == 'Customer' and new_role == 'Employee':
+        # Lấy thông tin customer để tạo employee
+        customer_name = target_account.customer.name if target_account.customer else data['username']
+        customer_phone = target_account.customer.phone if target_account.customer else ''
+        customer_email = target_account.customer.email if target_account.customer else ''
+
+        # Tạo Employee record với phone và email
+        employee_data = {
+            'employeeId': dao.generate_employee_id(),
+            'name': customer_name,
+            'role': 'Nhân viên',
+            'phone': customer_phone,  # THÊM PHONE
+            'email': customer_email  # THÊM EMAIL
+        }
+        employee = dao.create_employee(employee_data)
+
+        # Xóa customer record
+        if target_account.customer:
+            dao.delete_customer(target_account.customerId)
+
+        # Cập nhật account
+        target_account.customerId = None
+        target_account.employeeId = employee.employeeId
+
+    elif old_role == 'Employee' and new_role == 'Customer':
+        # Lấy thông tin employee để tạo customer
+        employee_name = target_account.employee.name if target_account.employee else data['username']
+        employee_phone = target_account.employee.phone if target_account.employee else data.get('phone', '')
+        employee_email = target_account.employee.email if target_account.employee else data.get('email', '')
+
+        # Tạo Customer record
+        customer_data = {
+            'customerId': dao.generate_customer_id(),
+            'name': employee_name,
+            'phone': employee_phone,
+            'email': employee_email
+        }
+        customer = dao.create_customer(customer_data)
+
+        # Xóa employee record
+        if target_account.employee:
+            dao.delete_employee(target_account.employeeId)
+
+        # Cập nhật account
+        target_account.employeeId = None
+        target_account.customerId = customer.customerId
+
+    elif old_role == 'Customer' and new_role == 'Admin':
+        # Xóa customer record
+        if target_account.customer:
+            dao.delete_customer(target_account.customerId)
+        target_account.customerId = None
+
+    elif old_role == 'Employee' and new_role == 'Admin':
+        # Xóa employee record
+        if target_account.employee:
+            dao.delete_employee(target_account.employeeId)
+        target_account.employeeId = None
+
+    elif old_role == 'Admin' and new_role == 'Customer':
+        # Tạo Customer record mới
+        customer_data = {
+            'customerId': dao.generate_customer_id(),
+            'name': data.get('name', data['username']),
+            'phone': data.get('phone', ''),
+            'email': data.get('email', '')
+        }
+        customer = dao.create_customer(customer_data)
+        target_account.customerId = customer.customerId
+
+    elif old_role == 'Admin' and new_role == 'Employee':
+        # Tạo Employee record mới
+        employee_data = {
+            'employeeId': dao.generate_employee_id(),
+            'name': data.get('name', data['username']),
+            'role': 'Nhân viên',
+            'phone': data.get('phone', ''),  # THÊM PHONE
+            'email': data.get('email', '')  # THÊM EMAIL
+        }
+        employee = dao.create_employee(employee_data)
+        target_account.employeeId = employee.employeeId
+
+    # Cập nhật role
+    target_account.role = new_role
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': f'Đổi role thành công từ {old_role} thành {new_role}',
+        'data': {
+            'username': target_account.username,
+            'oldRole': old_role,
+            'newRole': new_role
+        }
+    }), 200
+
+
+@app.route('/api/auth/accounts', methods=['GET'])
+def get_all_accounts():
+    """Lấy danh sách tất cả tài khoản - chỉ admin"""
+    admin_username = request.args.get('adminUsername')
+
+    if not admin_username:
+        return jsonify({'success': False, 'message': 'Thiếu thông tin admin'}), 400
+
+    admin_account = dao.get_account_by_username(admin_username)
+    if not admin_account or admin_account.role != 'Admin':
+        return jsonify({'success': False, 'message': 'Không có quyền truy cập'}), 403
+
+    try:
+        accounts = dao.get_all_accounts()
+        data = []
+
+        for acc in accounts:
+            account_info = {
+                'accountId': acc.accountId,
+                'username': acc.username,
+                'role': acc.role,
+                'createdAt': acc.createdAt.isoformat()
+            }
+
+            # Thêm thông tin chi tiết theo role
+            if acc.role == 'Customer' and acc.customer:
+                account_info['name'] = acc.customer.name
+                account_info['phone'] = acc.customer.phone
+                account_info['email'] = acc.customer.email
+            elif acc.role == 'Employee' and acc.employee:
+                account_info['name'] = acc.employee.name
+                account_info['phone'] = acc.employee.phone or ''  # THÊM PHONE
+                account_info['email'] = acc.employee.email or ''  # THÊM EMAIL
+                account_info['employeeRole'] = acc.employee.role
+            else:
+                # Admin hoặc không có record liên kết
+                account_info['name'] = acc.username
+                account_info['phone'] = ''
+                account_info['email'] = ''
+
+            data.append(account_info)
+
+        return jsonify({'success': True, 'data': data}), 200
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Có lỗi xảy ra: {str(e)}'}), 500
+
+
 # CUSTOMER APIs
 
 @app.route('/api/customers', methods=['POST'])
@@ -300,7 +480,9 @@ def get_employees():
     data = [{
         'employeeId': e.employeeId,
         'name': e.name,
-        'role': e.role
+        'role': e.role,
+        'phone': e.phone or '',  # THÊM PHONE
+        'email': e.email or ''   # THÊM EMAIL
     } for e in employees]
     return jsonify({'success': True, 'data': data}), 200
 
@@ -314,7 +496,9 @@ def get_employee(employeeId):
     return jsonify({'success': True, 'data': {
         'employeeId': employee.employeeId,
         'name': employee.name,
-        'role': employee.role
+        'role': employee.role,
+        'phone': employee.phone or '',  # THÊM PHONE
+        'email': employee.email or ''   # THÊM EMAIL
     }}), 200
 
 

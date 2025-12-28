@@ -44,3 +44,7 @@ def generate_account_id():
 def generate_customer_id():
     """Tạo mã khách hàng tự động"""
     return 'C' + secrets.token_hex(4).upper()
+
+def generate_employee_id():
+    """Tạo mã nhân viên tự động"""
+    return 'E' + secrets.token_hex(4).upper()
