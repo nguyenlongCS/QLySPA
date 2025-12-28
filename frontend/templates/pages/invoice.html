@@ -1,0 +1,463 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}Hóa Đơn | OU Spa{% endblock %}
+
+{% block page_css %}
+<style>
+/* Header style cho invoice page */
+.invoice-page header nav {
+    padding: 8px 30px;
+}
+.invoice-page header {
+    background: #eee2ca;
+    position: sticky;
+    top: 0px;
+    z-index: 999;
+    height: 100px;
+}
+
+.invoice-page header nav a {
+    color: #222 !important;
+}
+
+.invoice-page header nav a:hover {
+    color: #c8a24a;
+}
+
+.invoice-page header nav a::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 0;
+    height: 1px;
+    background: #0e0e0e;
+    transform: translateX(-50%);
+    transition: width 0.2s ease;
+    pointer-events: none;
+}
+
+.invoice-page .btn-primary {
+    background: transparent;
+    color: #222;
+    border: 1px solid #222;
+}
+
+.invoice-page .btn-primary:hover {
+    background: #c8a24a;
+    color: #fff;
+    border-color: #c8a24a;
+}
+
+/* Container styling */
+.invoice-container {
+    max-width: 900px;
+    margin: 80px auto 60px;
+    padding: 40px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.invoice-container h1 {
+    text-align: center;
+    font-size: 36px;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.login-required {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    margin: 40px 0;
+}
+
+.login-required h3 {
+    color: #856404;
+    margin-bottom: 15px;
+}
+
+.login-required p {
+    color: #856404;
+    margin-bottom: 20px;
+}
+
+.btn-auth {
+    display: inline-block;
+    background: #c8a165;
+    color: white;
+    padding: 12px 24px;
+    text-decoration: none;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.btn-auth:hover {
+    background: #b8944f;
+    color: white;
+}
+
+.invoice-list {
+    margin-top: 20px;
+}
+
+.invoice-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: box-shadow 0.3s;
+}
+
+.invoice-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.invoice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.invoice-id {
+    font-weight: 600;
+    color: #333;
+}
+
+.invoice-total {
+    font-weight: 600;
+    color: #c8a165;
+    font-size: 18px;
+}
+
+.invoice-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.invoice-field {
+    font-size: 14px;
+}
+
+.invoice-field strong {
+    display: block;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.no-invoices {
+    text-align: center;
+    color: #666;
+    padding: 40px;
+    background: white;
+    border-radius: 8px;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+.invoice-detail-header {
+    text-align: center;
+    border-bottom: 2px solid #c8a165;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.invoice-detail-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.invoice-calculation {
+    border-top: 1px solid #ddd;
+    padding-top: 15px;
+}
+
+.calculation-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+}
+
+.calculation-row.total {
+    font-weight: 600;
+    font-size: 18px;
+    color: #c8a165;
+    border-top: 2px solid #c8a165;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+@media (max-width: 768px) {
+    .invoice-detail-info {
+        grid-template-columns: 1fr;
+    }
+
+    .invoice-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .invoice-details {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block body_class %}invoice-page{% endblock %}
+
+{% block content %}
+<section class="invoice-container">
+    <h1>HÓA ĐƠN CỦA TÔI</h1>
+
+    <!-- Thông báo yêu cầu đăng nhập -->
+    <div id="login-required" class="login-required">
+        <h3>Vui lòng đăng nhập để xem hóa đơn</h3>
+        <p>Để xem lịch sử hóa đơn và chi tiết thanh toán, vui lòng đăng nhập vào tài khoản của bạn.</p>
+        <a href="{{ url_for('login') }}?return={{ url_for('invoice') }}" class="btn-auth">Đăng nhập ngay</a>
+        <p style="margin-top: 15px;">Chưa có tài khoản? <a href="{{ url_for('register') }}">Đăng ký tại đây</a></p>
+    </div>
+
+    <!-- Nội dung cho user đã đăng nhập -->
+    <div id="user-content" style="display: none;">
+        <div class="invoice-list" id="invoice-list">
+            <div class="no-invoices">Đang tải...</div>
+        </div>
+    </div>
+</section>
+
+<!-- Modal chi tiết hóa đơn -->
+<div id="invoice-modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="invoice-detail-content">
+            <!-- Nội dung chi tiết sẽ được load động -->
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE_URL = 'http://127.0.0.1:5000/api';
+let currentUser = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkLoginStatus();
+    setupModal();
+});
+
+function checkLoginStatus() {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const userInfo = localStorage.getItem('userInfo');
+
+    if (!isLoggedIn || !userInfo) {
+        document.getElementById('login-required').style.display = 'block';
+        document.getElementById('user-content').style.display = 'none';
+        return;
+    }
+
+    try {
+        currentUser = JSON.parse(userInfo);
+
+        if (currentUser.role !== 'Customer') {
+            alert('Trang này chỉ dành cho khách hàng');
+            window.location.href = '/';
+            return;
+        }
+
+        document.getElementById('login-required').style.display = 'none';
+        document.getElementById('user-content').style.display = 'block';
+
+        loadInvoices();
+
+    } catch (error) {
+        console.error('Lỗi parse user info:', error);
+        logout();
+    }
+}
+
+async function loadInvoices() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/invoices`);
+        const result = await response.json();
+
+        if (result.success) {
+            const customerInvoices = result.data.filter(invoice =>
+                invoice.customerId === currentUser.customerId
+            );
+
+            displayInvoices(customerInvoices);
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải hóa đơn:', error);
+        document.getElementById('invoice-list').innerHTML = '<div class="no-invoices">Có lỗi xảy ra</div>';
+    }
+}
+
+function displayInvoices(invoices) {
+    const container = document.getElementById('invoice-list');
+
+    if (invoices.length === 0) {
+        container.innerHTML = '<div class="no-invoices">Chưa có hóa đơn nào.</div>';
+        return;
+    }
+
+    const html = invoices.map(invoice => `
+        <div class="invoice-item" onclick="showInvoiceDetail('${invoice.invoiceId}')">
+            <div class="invoice-header">
+                <span class="invoice-id">Mã HĐ: ${invoice.invoiceId}</span>
+                <span class="invoice-total">${invoice.finalTotal.toLocaleString()}đ</span>
+            </div>
+            <div class="invoice-details">
+                <div class="invoice-field">
+                    <strong>Dịch vụ:</strong>
+                    ${invoice.serviceName}
+                </div>
+                <div class="invoice-field">
+                    <strong>Tổng tiền:</strong>
+                    ${invoice.total.toLocaleString()}đ
+                </div>
+                <div class="invoice-field">
+                    <strong>Giảm giá:</strong>
+                    ${invoice.discount.toLocaleString()}đ
+                </div>
+                <div class="invoice-field">
+                    <strong>VAT:</strong>
+                    ${invoice.vat.toLocaleString()}đ
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    container.innerHTML = html;
+}
+
+async function showInvoiceDetail(invoiceId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/invoices/${invoiceId}`);
+        const result = await response.json();
+
+        if (result.success) {
+            const invoice = result.data;
+
+            const html = `
+                <div class="invoice-detail-header">
+                    <h2>HÓA ĐƠN THANH TOÁN</h2>
+                    <h3>OU SPA</h3>
+                    <p>100 Nguyễn Gia Trí, Phường 25, Quận Bình Thạnh, TP.HCM</p>
+                    <p>Tel: 0979614148</p>
+                </div>
+
+                <div class="invoice-detail-info">
+                    <div>
+                        <h4>Thông tin khách hàng:</h4>
+                        <p><strong>Họ tên:</strong> ${invoice.customerName}</p>
+                        <p><strong>Điện thoại:</strong> ${invoice.customerPhone}</p>
+                        <p><strong>Mã HĐ:</strong> ${invoice.invoiceId}</p>
+                    </div>
+                    <div>
+                        <h4>Thông tin dịch vụ:</h4>
+                        <p><strong>Dịch vụ:</strong> ${invoice.serviceName}</p>
+                        <p><strong>Nhân viên:</strong> ${invoice.employeeName}</p>
+                        <p><strong>Thời gian:</strong> ${new Date(invoice.bookingTime).toLocaleDateString('vi-VN')}</p>
+                    </div>
+                </div>
+
+                <div class="invoice-calculation">
+                    <div class="calculation-row">
+                        <span>Giá dịch vụ:</span>
+                        <span>${invoice.total.toLocaleString()}đ</span>
+                    </div>
+                    <div class="calculation-row">
+                        <span>Giảm giá:</span>
+                        <span>-${invoice.discount.toLocaleString()}đ</span>
+                    </div>
+                    <div class="calculation-row">
+                        <span>VAT (10%):</span>
+                        <span>${invoice.vat.toLocaleString()}đ</span>
+                    </div>
+                    <div class="calculation-row total">
+                        <span>TỔNG TIỀN:</span>
+                        <span>${invoice.finalTotal.toLocaleString()}đ</span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <p><em>Cảm ơn quý khách đã sử dụng dịch vụ tại OU Spa!</em></p>
+                </div>
+            `;
+
+            document.getElementById('invoice-detail-content').innerHTML = html;
+            document.getElementById('invoice-modal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải chi tiết hóa đơn:', error);
+        alert('Không thể tải chi tiết hóa đơn');
+    }
+}
+
+function setupModal() {
+    const modal = document.getElementById('invoice-modal');
+    const closeBtn = document.querySelector('.close');
+
+    closeBtn.onclick = function() {
+        modal.style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
+}
+
+function logout() {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userInfo');
+    currentUser = null;
+    window.location.reload();
+}
+</script>
+{% endblock %}

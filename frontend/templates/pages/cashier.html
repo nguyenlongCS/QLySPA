@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Trang Thu Ngân | OU Spa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+        }
+
+        .header .user-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .btn-logout {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #c8a165;
+            border-bottom-color: #c8a165;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .booking-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            background: #f9f9f9;
+        }
+
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .booking-id {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .booking-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-accepted {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .booking-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minItems(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .booking-field {
+            font-size: 14px;
+        }
+
+        .booking-field strong {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .booking-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-invoice {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-invoice:hover {
+            background: #218838;
+        }
+
+        .btn-invoice:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn-primary {
+            background: #c8a165;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            background: #b8944f;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .invoice-summary {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .calculation-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .calculation-row.total {
+            font-weight: 600;
+            font-size: 16px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .tab-nav {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Trang Thu Ngân - OU Spa</h1>
+        <div class="user-info">
+            <span id="cashier-name">Thu ngân</span>
+            <button class="btn-logout" onclick="logout()">Đăng xuất</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="showTab('accepted-bookings')">Lịch Chờ Thanh Toán</button>
+            <button class="tab-btn" onclick="showTab('invoice-history')">Lịch Sử Hóa Đơn</button>
+        </div>
+
+        <!-- Tab: Lịch chờ thanh toán -->
+        <div id="accepted-bookings" class="tab-content active">
+            <h3>Lịch đã xác nhận - Chờ thanh toán</h3>
+            <div id="accepted-bookings-list">
+                <div class="no-data">Đang tải...</div>
+            </div>
+        </div>
+
+        <!-- Tab: Lịch sử hóa đơn -->
+        <div id="invoice-history" class="tab-content">
+            <h3>Lịch sử hóa đơn đã xuất</h3>
+            <div id="invoice-history-list">
+                <div class="no-data">Đang tải...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal tạo hóa đơn -->
+    <div id="invoice-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Tạo Hóa Đơn</h3>
+            <form id="invoice-form">
+                <div id="booking-info" style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                    <!-- Thông tin booking sẽ được load ở đây -->
+                </div>
+
+                <div class="form-group">
+                    <label for="invoice-id">Mã hóa đơn:</label>
+                    <input type="text" id="invoice-id" name="invoiceId" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="discount">Giảm giá (%):</label>
+                    <input type="number" id="discount" name="discount" min="0" max="20" step="0.1" value="0" placeholder="Nhập % giảm giá (tối đa 20%)">
+                    <div class="error-message" id="discount-error"></div>
+                </div>
+
+                <div class="invoice-summary" id="invoice-calculation">
+                    <!-- Tính toán sẽ được hiển thị ở đây -->
+                </div>
+
+                <button type="submit" class="btn-primary">Xuất Hóa Đơn</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:5000/api';
+        let currentUser = null;
+        let currentBooking = null;
+        let vatRate = 10;
+        let maxDiscount = 20;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatus();
+            setupModal();
+        });
+
+        function checkLoginStatus() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const userInfo = localStorage.getItem('userInfo');
+
+            if (!isLoggedIn || !userInfo) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                currentUser = JSON.parse(userInfo);
+
+                // Chỉ cho phép role Cashier
+                if (currentUser.role !== 'Cashier') {
+                    alert('Trang này chỉ dành cho thu ngân');
+                    logout();
+                    return;
+                }
+
+                document.getElementById('cashier-name').textContent = currentUser.name || currentUser.username;
+
+                loadSettings();
+                loadAcceptedBookings();
+
+            } catch (error) {
+                console.error('Lỗi parse user info:', error);
+                logout();
+            }
+        }
+
+        function showTab(tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'accepted-bookings') {
+                loadAcceptedBookings();
+            } else if (tabName === 'invoice-history') {
+                loadInvoiceHistory();
+            }
+        }
+
+        async function loadSettings() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/settings`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const settings = result.data;
+                    const vatSetting = settings.find(s => s.settingId === 'vat_rate');
+                    const discountSetting = settings.find(s => s.settingId === 'max_discount');
+
+                    if (vatSetting) vatRate = parseFloat(vatSetting.value);
+                    if (discountSetting) maxDiscount = parseFloat(discountSetting.value);
+
+                    document.getElementById('discount').max = maxDiscount;
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải settings:', error);
+            }
+        }
+
+        async function loadAcceptedBookings() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/bookings`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const acceptedBookings = result.data.filter(booking =>
+                        booking.status === 'Chấp nhận' && !hasInvoice(booking)
+                    );
+
+                    displayAcceptedBookings(acceptedBookings);
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải lịch chấp nhận:', error);
+                document.getElementById('accepted-bookings-list').innerHTML = '<div class="no-data">Có lỗi xảy ra</div>';
+            }
+        }
+
+        function hasInvoice(booking) {
+            // Kiểm tra xem booking có hóa đơn chưa dựa trên invoiceId
+            return booking.invoiceId && booking.invoiceId.trim() !== '' && booking.invoiceId !== null;
+        }
+
+        async function loadInvoiceHistory() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/invoices`);
+                const result = await response.json();
+
+                if (result.success) {
+                    displayInvoiceHistory(result.data);
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải lịch sử hóa đơn:', error);
+                document.getElementById('invoice-history-list').innerHTML = '<div class="no-data">Có lỗi xảy ra</div>';
+            }
+        }
+
+        function displayAcceptedBookings(bookings) {
+            const container = document.getElementById('accepted-bookings-list');
+
+            if (bookings.length === 0) {
+                container.innerHTML = '<div class="no-data">Không có lịch chờ thanh toán.</div>';
+                return;
+            }
+
+            const html = bookings.map(booking => {
+                const bookingTime = new Date(booking.time);
+                const formattedDate = bookingTime.toLocaleDateString('vi-VN');
+                const formattedTime = bookingTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="booking-item">
+                        <div class="booking-header">
+                            <span class="booking-id">Mã: ${booking.bookingId}</span>
+                            <span class="booking-status status-accepted">${booking.status}</span>
+                        </div>
+                        <div class="booking-details">
+                            <div class="booking-field">
+                                <strong>Khách hàng:</strong>
+                                ${booking.customer.name}
+                            </div>
+                            <div class="booking-field">
+                                <strong>Nhân viên:</strong>
+                                ${booking.employee.name}
+                            </div>
+                            <div class="booking-field">
+                                <strong>Dịch vụ:</strong>
+                                ${booking.service.name}
+                            </div>
+                            <div class="booking-field">
+                                <strong>Ngày:</strong>
+                                ${formattedDate}
+                            </div>
+                            <div class="booking-field">
+                                <strong>Giờ:</strong>
+                                ${formattedTime}
+                            </div>
+                        </div>
+                        <div class="booking-actions">
+                            <button class="btn-invoice" onclick="createInvoice('${booking.bookingId}')">Xuất Hóa Đơn</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function displayInvoiceHistory(invoices) {
+            const container = document.getElementById('invoice-history-list');
+
+            if (invoices.length === 0) {
+                container.innerHTML = '<div class="no-data">Chưa có hóa đơn nào.</div>';
+                return;
+            }
+
+            const html = invoices.map(invoice => `
+                <div class="booking-item">
+                    <div class="booking-header">
+                        <span class="booking-id">Mã HĐ: ${invoice.invoiceId}</span>
+                        <span class="booking-status status-accepted">Đã thanh toán</span>
+                    </div>
+                    <div class="booking-details">
+                        <div class="booking-field">
+                            <strong>Khách hàng:</strong>
+                            ${invoice.customerName}
+                        </div>
+                        <div class="booking-field">
+                            <strong>Dịch vụ:</strong>
+                            ${invoice.serviceName}
+                        </div>
+                        <div class="booking-field">
+                            <strong>Tổng tiền:</strong>
+                            ${invoice.total.toLocaleString()}đ
+                        </div>
+                        <div class="booking-field">
+                            <strong>Giảm giá:</strong>
+                            ${invoice.discount.toLocaleString()}đ
+                        </div>
+                        <div class="booking-field">
+                            <strong>Thành tiền:</strong>
+                            ${invoice.finalTotal.toLocaleString()}đ
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        async function createInvoice(bookingId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log('Booking data:', result.data); // Debug
+                    currentBooking = result.data;
+
+                    // Kiểm tra dữ liệu có đầy đủ không
+                    if (!currentBooking.service) {
+                        console.error('Service data missing');
+                        alert('Dữ liệu dịch vụ bị thiếu');
+                        return;
+                    }
+                    if (!currentBooking.customer) {
+                        console.error('Customer data missing');
+                        alert('Dữ liệu khách hàng bị thiếu');
+                        return;
+                    }
+
+                    showInvoiceModal();
+                } else {
+                    alert('Không thể tải thông tin booking: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải thông tin booking:', error);
+                alert('Không thể tải thông tin booking');
+            }
+        }
+
+        function showInvoiceModal() {
+            if (!currentBooking || !currentBooking.service || !currentBooking.customer) {
+                alert('Dữ liệu booking không đầy đủ');
+                return;
+            }
+
+            const bookingTime = new Date(currentBooking.time);
+            const formattedDateTime = `${bookingTime.toLocaleDateString('vi-VN')} ${bookingTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+
+            document.getElementById('booking-info').innerHTML = `
+                <h4>Thông tin đặt lịch:</h4>
+                <p><strong>Mã booking:</strong> ${currentBooking.bookingId}</p>
+                <p><strong>Khách hàng:</strong> ${currentBooking.customer.name}</p>
+                <p><strong>Dịch vụ:</strong> ${currentBooking.service.name}</p>
+                <p><strong>Thời gian:</strong> ${formattedDateTime}</p>
+            `;
+
+            document.getElementById('invoice-id').value = 'HD' + Date.now().toString().slice(-8);
+            document.getElementById('discount').value = 0;
+
+            calculateInvoice();
+            document.getElementById('invoice-modal').style.display = 'block';
+        }
+
+        function calculateInvoice() {
+            if (!currentBooking || !currentBooking.service) return;
+
+            const total = parseFloat(currentBooking.service.price) || 0;
+            const discountPercent = parseFloat(document.getElementById('discount').value) || 0;
+            const discount = total * discountPercent / 100;
+            const subtotal = total - discount;
+            const vat = subtotal * vatRate / 100;
+            const finalTotal = subtotal + vat;
+
+            document.getElementById('invoice-calculation').innerHTML = `
+                <div class="calculation-row">
+                    <span>Giá dịch vụ:</span>
+                    <span>${total.toLocaleString()}đ</span>
+                </div>
+                <div class="calculation-row">
+                    <span>Giảm giá (${discountPercent}%):</span>
+                    <span>-${discount.toLocaleString()}đ</span>
+                </div>
+                <div class="calculation-row">
+                    <span>VAT (${vatRate}%):</span>
+                    <span>${vat.toLocaleString()}đ</span>
+                </div>
+                <div class="calculation-row total">
+                    <span>TỔNG TIỀN:</span>
+                    <span>${finalTotal.toLocaleString()}đ</span>
+                </div>
+            `;
+        }
+
+        document.getElementById('discount').addEventListener('input', function() {
+            const value = parseFloat(this.value) || 0;
+            const errorElement = document.getElementById('discount-error');
+
+            if (value < 0 || value > maxDiscount) {
+                errorElement.textContent = `Giảm giá phải từ 0% đến ${maxDiscount}%`;
+                this.style.borderColor = '#dc3545';
+            } else {
+                errorElement.textContent = '';
+                this.style.borderColor = '#ddd';
+                calculateInvoice();
+            }
+        });
+
+        document.getElementById('invoice-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const discount = parseFloat(document.getElementById('discount').value) || 0;
+            if (discount < 0 || discount > maxDiscount) {
+                alert(`Giảm giá phải từ 0% đến ${maxDiscount}%`);
+                return;
+            }
+
+            const invoiceData = {
+                invoiceId: document.getElementById('invoice-id').value,
+                bookingId: currentBooking.bookingId,
+                discount: discount
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/invoices`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(invoiceData)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Xuất hóa đơn thành công!');
+                    document.getElementById('invoice-modal').style.display = 'none';
+                    loadAcceptedBookings();
+                    loadInvoiceHistory();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Lỗi khi xuất hóa đơn:', error);
+                alert('Có lỗi xảy ra khi xuất hóa đơn');
+            }
+        });
+
+        function setupModal() {
+            const modal = document.getElementById('invoice-modal');
+            const closeBtn = document.querySelector('.close');
+
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userInfo');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>

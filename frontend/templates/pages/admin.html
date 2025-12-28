@@ -49,6 +49,28 @@
             padding: 0 20px;
         }
 
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #c8a165;
+            margin-bottom: 10px;
+        }
+
         .tab-nav {
             display: flex;
             justify-content: center;
@@ -83,28 +105,6 @@
 
         .tab-content.active {
             display: block;
-        }
-
-        .stats-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .stat-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #c8a165;
-            margin-bottom: 10px;
         }
 
         .booking-item, .account-item {
@@ -162,6 +162,11 @@
         .role-admin {
             background: #fff3cd;
             color: #856404;
+        }
+
+        .role-cashier {
+            background: #e2d7f0;
+            color: #5a4a6b;
         }
 
         .booking-details, .account-details {
@@ -505,6 +510,7 @@
                 let roleClass = 'role-customer';
                 if (account.role === 'Employee') roleClass = 'role-employee';
                 if (account.role === 'Admin') roleClass = 'role-admin';
+                if (account.role === 'Cashier') roleClass = 'role-cashier';
 
                 return `
                     <div class="account-item">
@@ -583,13 +589,20 @@
         }
 
         function changeRole(username, currentRole) {
-            const roles = ['Customer', 'Employee', 'Admin'];
+            const roles = ['Customer', 'Employee', 'Admin', 'Cashier'];
             const otherRoles = roles.filter(role => role !== currentRole);
 
-            const newRole = prompt(`Đổi role cho ${username} (hiện tại: ${currentRole}):\n1. ${otherRoles[0]}\n2. ${otherRoles[1]}\n\nNhập số (1 hoặc 2):`);
+            let prompt_text = `Đổi role cho ${username} (hiện tại: ${currentRole}):\n`;
+            for(let i = 0; i < otherRoles.length; i++) {
+                prompt_text += `${i+1}. ${otherRoles[i]}\n`;
+            }
+            prompt_text += `\nNhập số (1-${otherRoles.length}):`;
 
-            if (newRole === '1' || newRole === '2') {
-                const selectedRole = otherRoles[parseInt(newRole) - 1];
+            const newRole = prompt(prompt_text);
+            const roleIndex = parseInt(newRole) - 1;
+
+            if (roleIndex >= 0 && roleIndex < otherRoles.length) {
+                const selectedRole = otherRoles[roleIndex];
                 updateRole(username, selectedRole);
             }
         }

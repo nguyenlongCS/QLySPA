@@ -42,6 +42,14 @@ def employee():
 def admin():
     return render_template('pages/admin.html')
 
+@app.route('/invoice')
+def invoice():
+    return render_template('pages/invoice.html')
+
+@app.route('/cashier')
+def cashier():
+    return render_template('pages/cashier.html')
+
 if __name__ == "__main__":
     app.run(
         host="127.0.0.1",

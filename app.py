@@ -226,7 +226,7 @@ def change_role():
         return jsonify({'success': False, 'message': 'Thiếu username hoặc newRole'}), 400
 
     # Validate role hợp lệ
-    valid_roles = ['Customer', 'Employee', 'Admin']
+    valid_roles = ['Customer', 'Employee', 'Admin', 'Cashier']
     if data['newRole'] not in valid_roles:
         return jsonify({'success': False, 'message': 'Role không hợp lệ'}), 400
 
@@ -331,6 +331,81 @@ def change_role():
             'email': data.get('email', '')  # THÊM EMAIL
         }
         employee = dao.create_employee(employee_data)
+        target_account.employeeId = employee.employeeId
+
+    elif old_role == 'Admin' and new_role == 'Cashier':
+        # Tạo Employee record mới với role Cashier
+        employee_data = {
+            'employeeId': dao.generate_employee_id(),
+            'name': data.get('name', data['username']),
+            'role': 'Thu ngân',
+            'phone': data.get('phone', ''),
+            'email': data.get('email', '')
+        }
+        employee = dao.create_employee(employee_data)
+        target_account.employeeId = employee.employeeId
+
+    elif old_role == 'Employee' and new_role == 'Cashier':
+        # Cập nhật role của employee hiện tại
+        if target_account.employee:
+            target_account.employee.role = 'Thu ngân'
+
+    elif old_role == 'Cashier' and new_role == 'Employee':
+        # Cập nhật role của employee hiện tại
+        if target_account.employee:
+            target_account.employee.role = 'Nhân viên'
+
+    elif old_role == 'Cashier' and new_role == 'Customer':
+        # Lấy thông tin employee để tạo customer
+        employee_name = target_account.employee.name if target_account.employee else data['username']
+        employee_phone = target_account.employee.phone if target_account.employee else data.get('phone', '')
+        employee_email = target_account.employee.email if target_account.employee else data.get('email', '')
+
+        # Tạo Customer record
+        customer_data = {
+            'customerId': dao.generate_customer_id(),
+            'name': employee_name,
+            'phone': employee_phone,
+            'email': employee_email
+        }
+        customer = dao.create_customer(customer_data)
+
+        # Xóa employee record
+        if target_account.employee:
+            dao.delete_employee(target_account.employeeId)
+
+        # Cập nhật account
+        target_account.employeeId = None
+        target_account.customerId = customer.customerId
+
+    elif old_role == 'Cashier' and new_role == 'Admin':
+        # Xóa employee record
+        if target_account.employee:
+            dao.delete_employee(target_account.employeeId)
+        target_account.employeeId = None
+
+    elif old_role == 'Customer' and new_role == 'Cashier':
+        # Lấy thông tin customer để tạo employee
+        customer_name = target_account.customer.name if target_account.customer else data['username']
+        customer_phone = target_account.customer.phone if target_account.customer else data.get('phone', '')
+        customer_email = target_account.customer.email if target_account.customer else data.get('email', '')
+
+        # Tạo Employee record với role Thu ngân
+        employee_data = {
+            'employeeId': dao.generate_employee_id(),
+            'name': customer_name,
+            'role': 'Thu ngân',
+            'phone': customer_phone,
+            'email': customer_email
+        }
+        employee = dao.create_employee(employee_data)
+
+        # Xóa customer record
+        if target_account.customer:
+            dao.delete_customer(target_account.customerId)
+
+        # Cập nhật account
+        target_account.customerId = None
         target_account.employeeId = employee.employeeId
 
     # Cập nhật role
