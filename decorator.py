@@ -1,0 +1,1 @@
+# Chứa decorator tuỳ chỉnh dùng trong project (ví dụ: kiểm tra quyền, xác thực, caching hoặc logging cho các view/func...)
