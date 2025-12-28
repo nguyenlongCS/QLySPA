@@ -343,6 +343,133 @@
             border-left: 4px solid #c8a165;
         }
 
+        /* Styles cho Settings */
+        .settings-section {
+            margin-bottom: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .settings-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #c8a165;
+            padding-bottom: 10px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .setting-description {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .setting-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .setting-value {
+            min-width: 100px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .btn-update {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-update:hover {
+            background: #218838;
+        }
+
+        .btn-update:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .service-price-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .service-price-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .service-price-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .service-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .service-id {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .price-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .price-input {
+            width: 120px;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .currency {
+            color: #666;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .tab-nav {
                 flex-direction: column;
@@ -353,6 +480,15 @@
             }
             .revenue-table {
                 font-size: 14px;
+            }
+            .setting-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .setting-controls {
+                width: 100%;
+                justify-content: flex-end;
             }
         }
     </style>
@@ -391,6 +527,7 @@
             <button class="tab-btn" onclick="showTab('all-bookings')">Tất Cả Lịch</button>
             <button class="tab-btn" onclick="showTab('manage-accounts')">Quản Lý Tài Khoản</button>
             <button class="tab-btn" onclick="showTab('reports')">Thống Kê</button>
+            <button class="tab-btn" onclick="showTab('settings')">Cài Đặt</button>
         </div>
 
         <!-- Tab: Duyệt lịch -->
@@ -460,6 +597,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab: Cài đặt -->
+        <div id="settings" class="tab-content">
+            <h3>Cài đặt hệ thống</h3>
+
+            <!-- Cài đặt chính sách -->
+            <div class="settings-section">
+                <div class="settings-title">Quy định chính sách</div>
+                <div id="system-settings">
+                    <div class="no-data">Đang tải...</div>
+                </div>
+            </div>
+
+            <!-- Cài đặt giá dịch vụ -->
+            <div class="settings-section">
+                <div class="settings-title">Quản lý giá dịch vụ</div>
+                <div id="service-prices">
+                    <div class="no-data">Đang tải...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -522,6 +680,8 @@
                 if (!hasData) {
                     loadReports();
                 }
+            } else if (tabName === 'settings') {
+                loadSettings();
             }
         }
 
@@ -935,6 +1095,174 @@
             } catch (error) {
                 console.error('Lỗi khi đổi role:', error);
                 alert('Có lỗi xảy ra');
+            }
+        }
+
+        async function loadSettings() {
+            try {
+                // Load system settings
+                const settingsResponse = await fetch(`${API_BASE_URL}/settings`);
+                const settingsResult = await settingsResponse.json();
+
+                if (settingsResult.success) {
+                    displaySystemSettings(settingsResult.data);
+                }
+
+                // Load services for price management
+                const servicesResponse = await fetch(`${API_BASE_URL}/services`);
+                const servicesResult = await servicesResponse.json();
+
+                if (servicesResult.success) {
+                    displayServicePrices(servicesResult.data);
+                }
+
+            } catch (error) {
+                console.error('Lỗi khi tải cài đặt:', error);
+                document.getElementById('system-settings').innerHTML = '<div class="no-data">Có lỗi xảy ra</div>';
+                document.getElementById('service-prices').innerHTML = '<div class="no-data">Có lỗi xảy ra</div>';
+            }
+        }
+
+        function displaySystemSettings(settings) {
+            let html = '';
+
+            settings.forEach(setting => {
+                let inputType = 'number';
+                let step = '';
+                let min = '';
+                let max = '';
+
+                if (setting.settingId === 'vat_rate' || setting.settingId === 'max_discount') {
+                    step = '0.1';
+                    min = '0';
+                    max = '100';
+                } else if (setting.settingId === 'max_bookings_per_day') {
+                    step = '1';
+                    min = '1';
+                    max = '20';
+                }
+
+                html += `
+                    <div class="setting-item">
+                        <div class="setting-info">
+                            <div class="setting-name">${setting.description}</div>
+                            <div class="setting-description">ID: ${setting.settingId}</div>
+                        </div>
+                        <div class="setting-controls">
+                            <input type="${inputType}"
+                                   class="setting-value"
+                                   id="setting-${setting.settingId}"
+                                   value="${setting.value}"
+                                   ${step ? `step="${step}"` : ''}
+                                   ${min ? `min="${min}"` : ''}
+                                   ${max ? `max="${max}"` : ''}
+                                   >
+                            ${setting.settingId.includes('rate') || setting.settingId.includes('discount') ? '%' : ''}
+                            <button class="btn-update" onclick="updateSystemSetting('${setting.settingId}')">
+                                Cập nhật
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('system-settings').innerHTML = html;
+        }
+
+        function displayServicePrices(services) {
+            if (services.length === 0) {
+                document.getElementById('service-prices').innerHTML = '<div class="no-data">Chưa có dịch vụ nào</div>';
+                return;
+            }
+
+            let html = '<div class="service-price-list">';
+
+            services.forEach(service => {
+                html += `
+                    <div class="service-price-item">
+                        <div class="service-price-header">
+                            <div>
+                                <div class="service-name">${service.name}</div>
+                                <div class="service-id">ID: ${service.servicesId}</div>
+                            </div>
+                        </div>
+                        <div class="price-controls">
+                            <input type="number"
+                                   class="price-input"
+                                   id="price-${service.servicesId}"
+                                   value="${service.price}"
+                                   min="0"
+                                   step="1000">
+                            <span class="currency">VNĐ</span>
+                            <button class="btn-update" onclick="updateServicePrice('${service.servicesId}')">
+                                Cập nhật
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            document.getElementById('service-prices').innerHTML = html;
+        }
+
+        async function updateSystemSetting(settingId) {
+            const inputElement = document.getElementById(`setting-${settingId}`);
+            const newValue = inputElement.value.trim();
+
+            if (!newValue) {
+                alert('Vui lòng nhập giá trị');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/settings/${settingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ value: newValue })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Cập nhật thành công!');
+                } else {
+                    alert('Lỗi: ' + result.message);
+                    loadSettings(); // Reload để hiển thị giá trị cũ
+                }
+            } catch (error) {
+                console.error('Lỗi khi cập nhật cài đặt:', error);
+                alert('Có lỗi xảy ra khi cập nhật');
+                loadSettings();
+            }
+        }
+
+        async function updateServicePrice(servicesId) {
+            const inputElement = document.getElementById(`price-${servicesId}`);
+            const newPrice = inputElement.value.trim();
+
+            if (!newPrice || isNaN(newPrice) || parseFloat(newPrice) < 0) {
+                alert('Vui lòng nhập giá hợp lệ');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/settings/service-price/${servicesId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ price: parseFloat(newPrice) })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Cập nhật giá dịch vụ thành công!');
+                } else {
+                    alert('Lỗi: ' + result.message);
+                    loadSettings(); // Reload để hiển thị giá trị cũ
+                }
+            } catch (error) {
+                console.error('Lỗi khi cập nhật giá dịch vụ:', error);
+                alert('Có lỗi xảy ra khi cập nhật');
+                loadSettings();
             }
         }
 
