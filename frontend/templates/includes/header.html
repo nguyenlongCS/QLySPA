@@ -14,6 +14,8 @@
             <li><a href="{{ url_for('about') }}">Giới Thiệu</a></li>
             <li><a href="{{ url_for('contact') }}">Liên Hệ</a></li>
             <li><a href="{{ url_for('feedback') }}">Feedback</a></li>
+            <!-- Link hóa đơn chỉ hiển thị khi đã đăng nhập -->
+            <li id="invoice-menu" style="display: none;"><a href="{{ url_for('invoice') }}">Hóa Đơn</a></li>
         </ul>
 
         <div class="header-btn">
@@ -44,6 +46,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const user = JSON.parse(userInfo);
             document.getElementById('user-menu').style.display = 'inline-block';
             document.getElementById('guest-menu').style.display = 'none';
+
+            // Hiển thị menu hóa đơn chỉ cho Customer
+            if (user.role === 'Customer') {
+                document.getElementById('invoice-menu').style.display = 'block';
+            }
         } catch (error) {
             // Nếu có lỗi parse, reset trạng thái đăng nhập
             localStorage.removeItem('isLoggedIn');
