@@ -1,3 +1,4 @@
+<!-- frontend/templates/pages/admin.html -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -228,9 +229,130 @@
             padding: 40px;
         }
 
+        /* Styles cho Reports */
+        .reports-controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            align-items: center;
+        }
+
+        .reports-controls input,
+        .reports-controls select,
+        .reports-controls button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .btn-load-report {
+            background: #c8a165;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .report-section {
+            margin-bottom: 40px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .report-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #c8a165;
+            padding-bottom: 10px;
+        }
+
+        .revenue-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .revenue-table th,
+        .revenue-table td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .revenue-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .revenue-table .total-row {
+            background: #c8a165;
+            color: white;
+            font-weight: bold;
+        }
+
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        .chart-bar {
+            display: inline-block;
+            width: 40px;
+            margin: 0 2px;
+            background: #c8a165;
+            vertical-align: bottom;
+            position: relative;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .chart-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            width: 60px;
+            text-align: center;
+        }
+
+        .chart-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .service-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .service-stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #c8a165;
+        }
+
         @media (max-width: 768px) {
             .tab-nav {
                 flex-direction: column;
+            }
+            .reports-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .revenue-table {
+                font-size: 14px;
             }
         }
     </style>
@@ -268,6 +390,7 @@
             <button class="tab-btn active" onclick="showTab('pending-approvals')">Duyệt Lịch</button>
             <button class="tab-btn" onclick="showTab('all-bookings')">Tất Cả Lịch</button>
             <button class="tab-btn" onclick="showTab('manage-accounts')">Quản Lý Tài Khoản</button>
+            <button class="tab-btn" onclick="showTab('reports')">Thống Kê</button>
         </div>
 
         <!-- Tab: Duyệt lịch -->
@@ -293,6 +416,50 @@
                 <div class="no-data">Đang tải...</div>
             </div>
         </div>
+
+        <!-- Tab: Thống kê -->
+        <div id="reports" class="tab-content">
+            <h3>Báo cáo thống kê</h3>
+
+            <div class="reports-controls">
+                <label>Tháng:</label>
+                <select id="report-month">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                </select>
+
+                <label>Năm:</label>
+                <input type="number" id="report-year" value="2025" min="2023" max="2030">
+
+                <button class="btn-load-report" onclick="loadReports()">Tải báo cáo</button>
+            </div>
+
+            <!-- Báo cáo doanh thu theo ngày -->
+            <div class="report-section">
+                <div class="report-title">Doanh thu theo ngày</div>
+                <div id="revenue-report-content">
+                    <p>Vui lòng chọn tháng và năm để xem báo cáo</p>
+                </div>
+            </div>
+
+            <!-- Báo cáo tần suất dịch vụ -->
+            <div class="report-section">
+                <div class="report-title">Thống kê dịch vụ được sử dụng</div>
+                <div id="service-report-content">
+                    <p>Vui lòng chọn tháng và năm để xem báo cáo</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -301,6 +468,9 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             checkLoginStatus();
+            const now = new Date();
+            document.getElementById('report-month').value = now.getMonth() + 1;
+            document.getElementById('report-year').value = now.getFullYear();
         });
 
         function checkLoginStatus() {
@@ -321,10 +491,7 @@
                     return;
                 }
 
-                // Hiển thị thông tin admin
                 document.getElementById('admin-name').textContent = currentUser.username;
-
-                // Load dữ liệu
                 loadStats();
                 loadPendingBookings();
 
@@ -335,25 +502,26 @@
         }
 
         function showTab(tabName) {
-            // Ẩn tất cả tab content
             const tabContents = document.querySelectorAll('.tab-content');
             tabContents.forEach(content => content.classList.remove('active'));
 
-            // Bỏ active cho tất cả tab buttons
             const tabBtns = document.querySelectorAll('.tab-btn');
             tabBtns.forEach(btn => btn.classList.remove('active'));
 
-            // Hiển thị tab được chọn
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
 
-            // Load data tương ứng
             if (tabName === 'pending-approvals') {
                 loadPendingBookings();
             } else if (tabName === 'all-bookings') {
                 loadAllBookings();
             } else if (tabName === 'manage-accounts') {
                 loadAccounts();
+            } else if (tabName === 'reports') {
+                const hasData = document.getElementById('revenue-report-content').innerHTML !== '<p>Vui lòng chọn tháng và năm để xem báo cáo</p>';
+                if (!hasData) {
+                    loadReports();
+                }
             }
         }
 
@@ -436,6 +604,144 @@
             }
         }
 
+        async function loadReports() {
+            const month = document.getElementById('report-month').value;
+            const year = document.getElementById('report-year').value;
+
+            if (!month || !year) {
+                alert('Vui lòng chọn tháng và năm');
+                return;
+            }
+
+            try {
+                const revenueResponse = await fetch(`${API_BASE_URL}/reports/daily-revenue?month=${month}&year=${year}`);
+                const revenueResult = await revenueResponse.json();
+
+                if (revenueResult.success) {
+                    displayDailyRevenueReport(revenueResult.data);
+                } else {
+                    document.getElementById('revenue-report-content').innerHTML =
+                        '<div class="no-data">Không thể tải báo cáo doanh thu</div>';
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải báo cáo doanh thu:', error);
+                document.getElementById('revenue-report-content').innerHTML =
+                    '<div class="no-data">Có lỗi xảy ra khi tải báo cáo doanh thu</div>';
+            }
+
+            try {
+                const serviceResponse = await fetch(`${API_BASE_URL}/reports/service-frequency?month=${month}&year=${year}`);
+                const serviceResult = await serviceResponse.json();
+
+                if (serviceResult.success) {
+                    displayServiceFrequencyReport(serviceResult.data);
+                } else {
+                    document.getElementById('service-report-content').innerHTML =
+                        '<div class="no-data">Không thể tải báo cáo dịch vụ</div>';
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải báo cáo dịch vụ:', error);
+                document.getElementById('service-report-content').innerHTML =
+                    '<div class="no-data">Có lỗi xảy ra khi tải báo cáo dịch vụ</div>';
+            }
+        }
+
+        function displayDailyRevenueReport(data) {
+            const { month, year, daily_revenue, total_revenue } = data;
+
+            const monthNames = ['', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5',
+                              'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+
+            let html = `<h4>${monthNames[month]} ${year}</h4>`;
+
+            if (daily_revenue.length === 0) {
+                html += '<div class="no-data">Không có dữ liệu doanh thu</div>';
+            } else {
+                html += `
+                    <table class="revenue-table">
+                        <thead>
+                            <tr>
+                                <th>Ngày</th>
+                                <th>Doanh thu (VNĐ)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                daily_revenue.forEach(item => {
+                    html += `
+                        <tr>
+                            <td>Ngày ${item.day}</td>
+                            <td>${item.revenue.toLocaleString('vi-VN')}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        <tr class="total-row">
+                            <td><strong>TỔNG DOANH THU</strong></td>
+                            <td><strong>${total_revenue.toLocaleString('vi-VN')}</strong></td>
+                        </tr>
+                    </tbody>
+                    </table>
+                `;
+            }
+
+            document.getElementById('revenue-report-content').innerHTML = html;
+        }
+
+        function displayServiceFrequencyReport(data) {
+            const { month, year, services, total_count } = data;
+
+            const monthNames = ['', 'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5',
+                              'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+
+            let html = `<h4>${monthNames[month]} ${year}</h4>`;
+
+            if (services.length === 0) {
+                html += '<div class="no-data">Không có dữ liệu dịch vụ</div>';
+            } else {
+                const maxCount = Math.max(...services.map(s => s.count));
+                const maxHeight = 300;
+
+                html += '<div class="chart-container" style="text-align: center; padding: 20px 0;">';
+
+                services.forEach(service => {
+                    const height = (service.count / maxCount) * maxHeight;
+                    html += `
+                        <div class="chart-bar" style="height: ${height}px; display: inline-block; margin: 0 5px; position: relative;">
+                            <div class="chart-value">${service.count}</div>
+                            <div class="chart-label">${service.name}</div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+
+                html += `
+                    <div class="service-stats">
+                        <div class="service-stat-item">
+                            <strong>Tổng lượt sử dụng:</strong> ${total_count}
+                        </div>
+                `;
+
+                services.forEach((service, index) => {
+                    const percentage = total_count > 0 ? ((service.count / total_count) * 100).toFixed(1) : 0;
+                    html += `
+                        <div class="service-stat-item">
+                            <strong>${service.name}</strong><br>
+                            Số lần: ${service.count} (${percentage}%)<br>
+                            Doanh thu: ${service.revenue.toLocaleString('vi-VN')} VNĐ
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            }
+
+            document.getElementById('service-report-content').innerHTML = html;
+        }
+
         function displayBookings(bookings, containerId, showActions) {
             const container = document.getElementById(containerId);
 
@@ -444,7 +750,6 @@
                 return;
             }
 
-            // Sắp xếp theo thời gian (mới nhất trước)
             bookings.sort((a, b) => new Date(b.time) - new Date(a.time));
 
             const html = bookings.map(booking => {

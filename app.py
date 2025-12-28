@@ -20,6 +20,7 @@ def after_request(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
     return response
 
+
 # Handle OPTIONS requests cho CORS preflight
 @app.route('/api/<path:path>', methods=['OPTIONS'])
 def handle_cors(path):
@@ -557,7 +558,7 @@ def get_employees():
         'name': e.name,
         'role': e.role,
         'phone': e.phone or '',  # THÊM PHONE
-        'email': e.email or ''   # THÊM EMAIL
+        'email': e.email or ''  # THÊM EMAIL
     } for e in employees]
     return jsonify({'success': True, 'data': data}), 200
 
@@ -573,7 +574,7 @@ def get_employee(employeeId):
         'name': employee.name,
         'role': employee.role,
         'phone': employee.phone or '',  # THÊM PHONE
-        'email': employee.email or ''   # THÊM EMAIL
+        'email': employee.email or ''  # THÊM EMAIL
     }}), 200
 
 
@@ -1076,9 +1077,9 @@ def update_service_price_via_settings(servicesId):
 
 # REPORTS APIs
 
-@app.route('/api/reports/revenue', methods=['GET'])
-def get_revenue_report():
-    """Báo cáo doanh thu theo tháng"""
+@app.route('/api/reports/daily-revenue', methods=['GET'])
+def get_daily_revenue_report():
+    """Báo cáo doanh thu theo ngày trong tháng"""
     month = request.args.get('month')
     year = request.args.get('year')
 
@@ -1091,30 +1092,49 @@ def get_revenue_report():
     except:
         return jsonify({'success': False, 'message': 'Tham số month/year không hợp lệ'}), 400
 
-    bookings = dao.get_bookings_by_month(month, year)
+    # Lấy tất cả booking có hóa đơn trong tháng
+    from calendar import monthrange
+    _, days_in_month = monthrange(year, month)
 
+    daily_revenue = {}
     total_revenue = 0
-    booking_count = len(bookings)
 
-    for booking in bookings:
-        service = Service.query.get(booking.servicesId)
-        if service:
-            total_revenue += service.price
+    # Khởi tạo doanh thu 0 cho tất cả ngày trong tháng
+    for day in range(1, days_in_month + 1):
+        daily_revenue[day] = 0
+
+    # Lấy tất cả invoice trong tháng
+    invoices = dao.get_all_invoices()
+    for invoice in invoices:
+        if invoice.booking:
+            booking_date = invoice.booking.time.date()
+            if booking_date.month == month and booking_date.year == year:
+                day = booking_date.day
+                daily_revenue[day] += invoice.finalTotal
+                total_revenue += invoice.finalTotal
+
+    # Chuyển đổi thành list để dễ hiển thị
+    daily_list = []
+    for day in range(1, days_in_month + 1):
+        daily_list.append({
+            'day': day,
+            'revenue': daily_revenue[day]
+        })
 
     return jsonify({
         'success': True,
         'data': {
             'month': month,
             'year': year,
-            'total_revenue': total_revenue,
-            'booking_count': booking_count
+            'daily_revenue': daily_list,
+            'total_revenue': total_revenue
         }
     }), 200
 
 
 @app.route('/api/reports/service-frequency', methods=['GET'])
 def get_service_frequency_report():
-    """Báo cáo tần suất sử dụng dịch vụ"""
+    """Báo cáo tần suất sử dụng dịch vụ theo tháng"""
     month = request.args.get('month')
     year = request.args.get('year')
 
@@ -1127,24 +1147,29 @@ def get_service_frequency_report():
     except:
         return jsonify({'success': False, 'message': 'Tham số month/year không hợp lệ'}), 400
 
-    bookings = dao.get_bookings_by_month(month, year)
-
+    # Lấy tất cả invoice trong tháng để đếm tần suất
     service_frequency = {}
-    for booking in bookings:
-        service_id = booking.servicesId
+    total_count = 0
 
-        if service_id not in service_frequency:
-            service = Service.query.get(service_id)
-            service_frequency[service_id] = {
-                'servicesId': service_id,
-                'name': service.name if service else 'Unknown',
-                'price': service.price if service else 0,
-                'count': 0,
-                'revenue': 0
-            }
+    invoices = dao.get_all_invoices()
+    for invoice in invoices:
+        if invoice.booking:
+            booking_date = invoice.booking.time.date()
+            if booking_date.month == month and booking_date.year == year:
+                service_id = invoice.booking.servicesId
+                service_name = invoice.booking.service.name
 
-        service_frequency[service_id]['count'] += 1
-        service_frequency[service_id]['revenue'] += service_frequency[service_id]['price']
+                if service_id not in service_frequency:
+                    service_frequency[service_id] = {
+                        'servicesId': service_id,
+                        'name': service_name,
+                        'count': 0,
+                        'revenue': 0
+                    }
+
+                service_frequency[service_id]['count'] += 1
+                service_frequency[service_id]['revenue'] += invoice.finalTotal
+                total_count += 1
 
     result = sorted(service_frequency.values(), key=lambda x: x['count'], reverse=True)
 
@@ -1153,7 +1178,8 @@ def get_service_frequency_report():
         'data': {
             'month': month,
             'year': year,
-            'services': result
+            'services': result,
+            'total_count': total_count
         }
     }), 200
 
