@@ -53,8 +53,8 @@ class Employee(db.Model):
     employeeId = db.Column(db.String(50), primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     role = db.Column(db.String(50), nullable=False)
-    phone = db.Column(db.String(20))  # THÊM
-    email = db.Column(db.String(100))  # THÊM
+    phone = db.Column(db.String(20))
+    email = db.Column(db.String(100))
     bookings = db.relationship('Booking', backref='employee', lazy=True)
 
 
@@ -81,3 +81,19 @@ class Booking(db.Model):
     servicesId = db.Column(db.String(50), db.ForeignKey('services.servicesId'), nullable=False)
     employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'), nullable=False)
     invoiceId = db.Column(db.String(50), db.ForeignKey('invoices.invoiceId'))
+
+
+class ServiceForm(db.Model):
+    """Model cho bảng phiếu dịch vụ"""
+    __tablename__ = 'service_forms'
+    formId = db.Column(db.String(50), primary_key=True)
+    bookingId = db.Column(db.String(50), db.ForeignKey('bookings.bookingId'), nullable=False)
+    employeeId = db.Column(db.String(50), db.ForeignKey('employees.employeeId'), nullable=False)
+    serviceName = db.Column(db.String(100), nullable=False)
+    serviceDuration = db.Column(db.Integer, nullable=False)
+    servicePrice = db.Column(db.Float, nullable=False)
+    serviceNote = db.Column(db.String(200))
+    createdAt = db.Column(db.DateTime, default=datetime.now)
+
+    booking = db.relationship('Booking', backref='service_form', uselist=False, lazy=True)
+    employee = db.relationship('Employee', backref='service_forms', lazy=True)

@@ -1,3 +1,4 @@
+<!-- frontend/templates/pages/employee.html -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -135,6 +136,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
+            margin-bottom: 15px;
         }
 
         .booking-field {
@@ -147,10 +149,109 @@
             margin-bottom: 5px;
         }
 
+        .booking-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-service-form {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-service-form:hover {
+            background: #0056b3;
+        }
+
         .no-bookings {
             text-align: center;
             color: #666;
             padding: 40px;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        .service-form {
+            width: 100%;
+        }
+
+        .service-form h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .service-form table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .service-form th,
+        .service-form td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .service-form th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .service-form .form-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .service-form .info-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .service-form .info-group h4 {
+            margin-bottom: 10px;
+            color: #333;
         }
     </style>
 </head>
@@ -192,12 +293,120 @@
         </div>
     </div>
 
+    <!-- Modal phiếu dịch vụ -->
+    <div id="service-form-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div class="service-form">
+                <h3>PHIẾU DỊCH VỤ - OU SPA</h3>
+
+                <div class="form-info">
+                    <div class="info-group">
+                        <h4>Thông tin khách hàng</h4>
+                        <p><strong>Tên:</strong> <span id="form-customer-name"></span></p>
+                        <p><strong>Điện thoại:</strong> <span id="form-customer-phone"></span></p>
+                        <p><strong>Mã booking:</strong> <span id="form-booking-id"></span></p>
+                    </div>
+                    <div class="info-group">
+                        <h4>Thông tin nhân viên</h4>
+                        <p><strong>Tên:</strong> <span id="form-employee-name"></span></p>
+                        <p><strong>Ngày thực hiện:</strong> <span id="form-booking-date"></span></p>
+                        <p><strong>Giờ thực hiện:</strong> <span id="form-booking-time"></span></p>
+                    </div>
+                </div>
+
+                <form id="service-detail-form">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 10%;">STT</th>
+                                <th style="width: 30%;">Dịch vụ</th>
+                                <th style="width: 20%;">Thời lượng (phút)</th>
+                                <th style="width: 20%;">Giá (VNĐ)</th>
+                                <th style="width: 20%;">Ghi chú</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="text-align: center;">1</td>
+                                <td>
+                                    <input type="text" id="service-name" name="serviceName"
+                                           style="width: 100%; padding: 8px; border: 1px solid #ddd;" required>
+                                </td>
+                                <td>
+                                    <input type="number" id="service-duration" name="serviceDuration"
+                                           min="15" max="120"
+                                           style="width: 100%; padding: 8px; border: 1px solid #ddd;" required>
+                                </td>
+                                <td>
+                                    <input type="number" id="service-price" name="servicePrice"
+                                           min="0" step="1000"
+                                           style="width: 100%; padding: 8px; border: 1px solid #ddd;" required>
+                                </td>
+                                <td>
+                                    <input type="text" id="service-note" name="serviceNote"
+                                           style="width: 100%; padding: 8px; border: 1px solid #ddd;">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button type="submit" class="btn-save" style="background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px;">Lưu phiếu dịch vụ</button>
+                        <button type="button" onclick="closeServiceForm()" style="background: #6c757d; color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 14px;">Hủy</button>
+                        <p style="margin-top: 10px; color: #666; font-size: 12px;">
+                            <em>Phiếu dịch vụ được lập vào ngày: <span id="form-created-date"></span></em>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = 'http://127.0.0.1:5000/api';
         let currentUser = null;
+        let currentBooking = null;
 
         document.addEventListener('DOMContentLoaded', function() {
             checkLoginStatus();
+            setupModal();
+
+            // Thêm event listener cho form
+            const serviceForm = document.getElementById('service-detail-form');
+            if (serviceForm) {
+                serviceForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const formData = {
+                        bookingId: currentBooking.bookingId,
+                        employeeId: currentUser.employeeId,
+                        serviceName: document.getElementById('service-name').value.trim(),
+                        serviceDuration: parseInt(document.getElementById('service-duration').value),
+                        servicePrice: parseFloat(document.getElementById('service-price').value),
+                        serviceNote: document.getElementById('service-note').value.trim()
+                    };
+
+                    // Validate
+                    if (!formData.serviceName || !formData.serviceDuration || !formData.servicePrice) {
+                        alert('Vui lòng điền đầy đủ thông tin bắt buộc');
+                        return;
+                    }
+
+                    if (formData.serviceDuration < 15 || formData.serviceDuration > 120) {
+                        alert('Thời lượng dịch vụ phải từ 15-120 phút');
+                        return;
+                    }
+
+                    if (formData.servicePrice <= 0) {
+                        alert('Giá dịch vụ phải lớn hơn 0');
+                        return;
+                    }
+
+                    // Lưu phiếu dịch vụ (có thể lưu vào localStorage hoặc gửi lên server)
+                    saveServiceForm(formData);
+                });
+            }
         });
 
         function checkLoginStatus() {
@@ -241,6 +450,9 @@
                         booking.employee.employeeId === currentUser.employeeId
                     );
 
+                    // Kiểm tra phiếu dịch vụ cho từng booking
+                    await checkServiceFormsStatus(employeeBookings);
+
                     updateStats(employeeBookings);
                     displayEmployeeBookings(employeeBookings);
                 }
@@ -248,6 +460,28 @@
                 console.error('Lỗi khi tải lịch nhân viên:', error);
                 document.getElementById('employee-bookings-list').innerHTML =
                     '<div class="no-bookings">Có lỗi xảy ra khi tải dữ liệu</div>';
+            }
+        }
+
+        async function checkServiceFormsStatus(bookings) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/service-forms/employee/${currentUser.employeeId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const serviceForms = result.data;
+
+                    // Đánh dấu booking đã có phiếu dịch vụ
+                    bookings.forEach(booking => {
+                        booking.hasServiceForm = serviceForms.some(sf => sf.bookingId === booking.bookingId);
+                    });
+                }
+            } catch (error) {
+                console.log('Không thể kiểm tra phiếu dịch vụ:', error);
+                // Nếu lỗi, mặc định là chưa có phiếu dịch vụ
+                bookings.forEach(booking => {
+                    booking.hasServiceForm = false;
+                });
             }
         }
 
@@ -293,6 +527,9 @@
                 if (booking.status === 'Từ chối') statusClass = 'status-rejected';
                 if (booking.status === 'Đã hủy') statusClass = 'status-cancelled';
 
+                // Chỉ hiển thị nút lập phiếu cho booking đã chấp nhận và chưa có phiếu dịch vụ
+                const showServiceFormBtn = booking.status === 'Chấp nhận' && !booking.hasServiceForm;
+
                 return `
                     <div class="booking-item">
                         <div class="booking-header">
@@ -317,11 +554,130 @@
                                 ${formattedTime}
                             </div>
                         </div>
+                        ${showServiceFormBtn ? `
+                            <div class="booking-actions">
+                                <button class="btn-service-form" onclick="showServiceForm('${booking.bookingId}')">Lập phiếu dịch vụ</button>
+                            </div>
+                        ` : booking.hasServiceForm && booking.status === 'Chấp nhận' ? `
+                            <div class="booking-actions">
+                                <span style="color: #28a745; font-size: 12px; font-weight: 600;">✓ Đã có phiếu dịch vụ</span>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
 
             container.innerHTML = html;
+        }
+
+        async function showServiceForm(bookingId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    currentBooking = result.data;
+                    console.log('Booking data:', currentBooking); // Debug log
+
+                    // Kiểm tra dữ liệu trước khi điền form
+                    if (!currentBooking.service) {
+                        alert('Dữ liệu dịch vụ không tồn tại');
+                        return;
+                    }
+                    if (!currentBooking.customer) {
+                        alert('Dữ liệu khách hàng không tồn tại');
+                        return;
+                    }
+                    if (!currentBooking.employee) {
+                        alert('Dữ liệu nhân viên không tồn tại');
+                        return;
+                    }
+
+                    fillServiceForm();
+                    document.getElementById('service-form-modal').style.display = 'block';
+                } else {
+                    alert('Không thể tải thông tin booking: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải booking:', error);
+                alert('Có lỗi xảy ra khi tải thông tin booking');
+            }
+        }
+
+        function fillServiceForm() {
+            if (!currentBooking || !currentBooking.service || !currentBooking.customer || !currentBooking.employee) {
+                alert('Dữ liệu booking không đầy đủ');
+                return;
+            }
+
+            const bookingTime = new Date(currentBooking.time);
+            const formattedDate = bookingTime.toLocaleDateString('vi-VN');
+            const formattedTime = bookingTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            const currentDate = new Date().toLocaleDateString('vi-VN');
+
+            // Điền thông tin khách hàng
+            document.getElementById('form-customer-name').textContent = currentBooking.customer.name || 'Chưa có';
+            document.getElementById('form-customer-phone').textContent = currentBooking.customer.phone || 'Chưa có';
+            document.getElementById('form-booking-id').textContent = currentBooking.bookingId || '';
+
+            // Điền thông tin nhân viên
+            document.getElementById('form-employee-name').textContent = currentBooking.employee.name || 'Chưa có';
+            document.getElementById('form-booking-date').textContent = formattedDate;
+            document.getElementById('form-booking-time').textContent = formattedTime;
+            document.getElementById('form-created-date').textContent = currentDate;
+
+            // Điền dữ liệu mặc định từ booking vào form inputs
+            const service = currentBooking.service;
+            document.getElementById('service-name').value = service.name || '';
+            document.getElementById('service-duration').value = service.durration || '';
+            document.getElementById('service-price').value = service.price || '';
+            document.getElementById('service-note').value = service.note || '';
+        }
+
+        function closeServiceForm() {
+            document.getElementById('service-form-modal').style.display = 'none';
+            document.getElementById('service-detail-form').reset();
+        }
+
+        async function saveServiceForm(formData) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/service-forms`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('Lưu phiếu dịch vụ thành công!');
+                    closeServiceForm();
+                    // Reload để cập nhật trạng thái
+                    loadEmployeeBookings();
+                } else {
+                    alert('Lỗi: ' + result.message);
+                }
+
+            } catch (error) {
+                console.error('Lỗi khi lưu phiếu dịch vụ:', error);
+                alert('Có lỗi xảy ra khi lưu phiếu dịch vụ');
+            }
+        }
+
+        function setupModal() {
+            const modal = document.getElementById('service-form-modal');
+            const closeBtn = document.querySelector('.close');
+
+            closeBtn.onclick = function() {
+                modal.style.display = 'none';
+            }
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = 'none';
+                }
+            }
         }
 
         function logout() {

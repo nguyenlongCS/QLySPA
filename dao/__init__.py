@@ -10,4 +10,5 @@ from .booking_dao import *
 from .invoice_dao import *
 from .account_dao import *
 from .settings_dao import *
+from .service_form_dao import *
 from .utils import *
