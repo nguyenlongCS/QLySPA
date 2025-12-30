@@ -1,4 +1,4 @@
-<!-- admin.html -->
+<!-- frontend/templates/pages/admin.html -->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -48,28 +48,6 @@
             max-width: 1400px;
             margin: 40px auto;
             padding: 0 20px;
-        }
-
-        .stats-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .stat-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #c8a165;
-            margin-bottom: 10px;
         }
 
         .tab-nav {
@@ -461,29 +439,6 @@
     </div>
 
     <div class="container">
-        <div class="stats-section">
-            <div class="stat-card">
-                <div class="stat-number" id="total-bookings">0</div>
-                <div>Tổng lịch đặt</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="pending-bookings">0</div>
-                <div>Đang chờ duyệt</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="total-customers">0</div>
-                <div>Khách hàng</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="total-employees">0</div>
-                <div>Nhân viên</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="total-services">0</div>
-                <div>Dịch vụ</div>
-            </div>
-        </div>
-
         <div class="tab-nav">
             <button class="tab-btn active" onclick="showTab('manage-bookings')">Quản Lý Đặt Lịch</button>
             <button class="tab-btn" onclick="showTab('manage-accounts')">Quản Lý Tài Khoản</button>
@@ -581,6 +536,7 @@
             <h3 id="account-modal-title">Thêm Tài Khoản</h3>
             <form id="account-form">
                 <input type="hidden" id="account-id" name="accountId">
+                <input type="hidden" id="is-editing" value="false">
                 <div class="form-group">
                     <label for="account-username">Tên đăng nhập:</label>
                     <input type="text" id="account-username" name="username" required>
@@ -592,21 +548,22 @@
                 <div class="form-group">
                     <label for="account-role">Vai trò:</label>
                     <select id="account-role" name="role" required>
+                        <option value="">-- Chọn vai trò --</option>
                         <option value="Customer">Khách hàng</option>
                         <option value="Employee">Nhân viên</option>
                         <option value="Cashier">Thu ngân</option>
                         <option value="Admin">Quản trị</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="name-group">
                     <label for="account-name">Họ tên:</label>
                     <input type="text" id="account-name" name="name" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="phone-group">
                     <label for="account-phone">Điện thoại:</label>
                     <input type="text" id="account-phone" name="phone">
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="email-group">
                     <label for="account-email">Email:</label>
                     <input type="email" id="account-email" name="email">
                 </div>
@@ -689,7 +646,6 @@
                 }
 
                 document.getElementById('admin-name').textContent = currentUser.username;
-                loadStats();
                 loadBookings();
 
             } catch (error) {
@@ -723,45 +679,6 @@
                 }
             } else if (tabName === 'settings') {
                 loadSettings();
-            }
-        }
-
-        async function loadStats() {
-            try {
-                const [bookingRes, customerRes, employeeRes, serviceRes] = await Promise.all([
-                    fetch(`${API_BASE_URL}/bookings`),
-                    fetch(`${API_BASE_URL}/customers`),
-                    fetch(`${API_BASE_URL}/employees`),
-                    fetch(`${API_BASE_URL}/services`)
-                ]);
-
-                const [bookings, customers, employees, services] = await Promise.all([
-                    bookingRes.json(),
-                    customerRes.json(),
-                    employeeRes.json(),
-                    serviceRes.json()
-                ]);
-
-                if (bookings.success) {
-                    const pendingCount = bookings.data.filter(b => b.status === 'Đang chờ').length;
-                    document.getElementById('total-bookings').textContent = bookings.data.length;
-                    document.getElementById('pending-bookings').textContent = pendingCount;
-                }
-
-                if (customers.success) {
-                    document.getElementById('total-customers').textContent = customers.data.length;
-                }
-
-                if (employees.success) {
-                    document.getElementById('total-employees').textContent = employees.data.length;
-                }
-
-                if (services.success) {
-                    document.getElementById('total-services').textContent = services.data.length;
-                }
-
-            } catch (error) {
-                console.error('Lỗi khi tải thống kê:', error);
             }
         }
 
@@ -852,7 +769,6 @@
                 if (result.success) {
                     alert('Đã chấp nhận lịch đặt');
                     loadBookings();
-                    loadStats();
                 }
             } catch (error) {
                 console.error('Lỗi khi chấp nhận lịch:', error);
@@ -874,7 +790,6 @@
                 if (result.success) {
                     alert('Đã từ chối lịch đặt');
                     loadBookings();
-                    loadStats();
                 }
             } catch (error) {
                 console.error('Lỗi khi từ chối lịch:', error);
@@ -951,13 +866,15 @@
             document.getElementById('account-modal-title').textContent = 'Thêm Tài Khoản';
             document.getElementById('account-submit-btn').textContent = 'Thêm Tài Khoản';
             document.getElementById('account-form').reset();
+            document.getElementById('account-username').readOnly = false;
+            document.getElementById('account-name').required = true;
             document.getElementById('password-group').style.display = 'block';
             document.getElementById('account-password').required = true;
+            document.getElementById('is-editing').value = 'false';
             document.getElementById('account-modal').style.display = 'block';
         }
 
         async function editAccount(accountId) {
-            // Tìm account từ danh sách hiện tại
             const response = await fetch(`${API_BASE_URL}/auth/accounts?adminUsername=${currentUser.username}`);
             const result = await response.json();
 
@@ -969,12 +886,14 @@
                     document.getElementById('account-submit-btn').textContent = 'Cập Nhật';
                     document.getElementById('account-id').value = account.accountId;
                     document.getElementById('account-username').value = account.username;
+                    document.getElementById('account-username').readOnly = true;
                     document.getElementById('account-role').value = account.role;
                     document.getElementById('account-name').value = account.name || '';
                     document.getElementById('account-phone').value = account.phone || '';
                     document.getElementById('account-email').value = account.email || '';
                     document.getElementById('password-group').style.display = 'none';
                     document.getElementById('account-password').required = false;
+                    document.getElementById('is-editing').value = 'true';
                     document.getElementById('account-modal').style.display = 'block';
                 }
             }
@@ -984,8 +903,26 @@
             if (!confirm('Bạn có chắc muốn xóa tài khoản này?')) return;
 
             try {
-                // Xóa tài khoản = thay đổi role thành không tồn tại, hoặc API delete riêng
-                alert('Chức năng xóa tài khoản chưa được triển khai trong API');
+                const response = await fetch(`${API_BASE_URL}/auth/accounts?adminUsername=${currentUser.username}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const account = result.data.find(acc => acc.username === username);
+                    if (account) {
+                        // Gọi API xóa tài khoản mới
+                        const deleteResponse = await fetch(`${API_BASE_URL}/auth/accounts/${account.accountId}?adminUsername=${currentUser.username}`, {
+                            method: 'DELETE'
+                        });
+
+                        const deleteResult = await deleteResponse.json();
+                        if (deleteResult.success) {
+                            alert('Xóa tài khoản thành công!');
+                            loadAccounts();
+                        } else {
+                            alert('Lỗi: ' + deleteResult.message);
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Lỗi khi xóa tài khoản:', error);
                 alert('Có lỗi xảy ra');
@@ -1027,7 +964,6 @@
                 if (result.success) {
                     alert(result.message);
                     loadAccounts();
-                    loadStats();
                 } else {
                     alert('Lỗi: ' + result.message);
                 }
@@ -1042,27 +978,95 @@
 
             const formData = new FormData(this);
             const data = Object.fromEntries(formData);
+            const isEditing = document.getElementById('is-editing').value === 'true';
 
             try {
-                if (editingAccount) {
-                    // Cập nhật tài khoản - cần API mới
-                    alert('Chức năng sửa tài khoản chưa được triển khai trong API');
+                if (isEditing) {
+                    // Sử dụng API mới để cập nhật thông tin tài khoản
+                    const updateData = {};
+                    if (data.fullName !== editingAccount.name) updateData.fullName = data.name;
+                    if (data.phone !== editingAccount.phone) updateData.phone = data.phone;
+                    if (data.email !== editingAccount.email) updateData.email = data.email;
+
+                    // Cập nhật thông tin cơ bản nếu có thay đổi
+                    if (Object.keys(updateData).length > 0) {
+                        const updateResponse = await fetch(`${API_BASE_URL}/auth/accounts/${editingAccount.accountId}?adminUsername=${currentUser.username}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(updateData)
+                        });
+
+                        const updateResult = await updateResponse.json();
+                        if (!updateResult.success) {
+                            alert('Lỗi cập nhật thông tin: ' + updateResult.message);
+                            return;
+                        }
+                    }
+
+                    // Đổi role nếu có thay đổi
+                    if (data.role !== editingAccount.role) {
+                        const roleResponse = await fetch(`${API_BASE_URL}/auth/change-role`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                username: editingAccount.username,
+                                newRole: data.role,
+                                adminUsername: currentUser.username
+                            })
+                        });
+
+                        const roleResult = await roleResponse.json();
+                        if (!roleResult.success) {
+                            alert('Lỗi đổi role: ' + roleResult.message);
+                            return;
+                        }
+                    }
+
+                    alert('Cập nhật tài khoản thành công!');
+                    document.getElementById('account-modal').style.display = 'none';
+                    loadAccounts();
                 } else {
-                    // Thêm tài khoản mới
-                    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    // Tạo tài khoản mới: tạo Customer trước, sau đó đổi role nếu cần
+                    const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(data)
+                        body: JSON.stringify({
+                            username: data.username,
+                            password: data.password,
+                            name: data.name,
+                            phone: data.phone,
+                            email: data.email
+                        })
                     });
 
-                    const result = await response.json();
-                    if (result.success) {
-                        alert('Thêm tài khoản thành công!');
+                    const registerResult = await registerResponse.json();
+                    if (registerResult.success) {
+                        // Nếu role không phải Customer, đổi role ngay
+                        if (data.role && data.role !== 'Customer') {
+                            const roleResponse = await fetch(`${API_BASE_URL}/auth/change-role`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    username: data.username,
+                                    newRole: data.role,
+                                    adminUsername: currentUser.username
+                                })
+                            });
+
+                            const roleResult = await roleResponse.json();
+                            if (roleResult.success) {
+                                alert(`Thêm tài khoản thành công với role ${data.role}!`);
+                            } else {
+                                alert('Tạo tài khoản thành công nhưng có lỗi khi đổi role: ' + roleResult.message);
+                            }
+                        } else {
+                            alert('Thêm tài khoản thành công!');
+                        }
+
                         document.getElementById('account-modal').style.display = 'none';
                         loadAccounts();
-                        loadStats();
                     } else {
-                        alert('Lỗi: ' + result.message);
+                        alert('Lỗi: ' + registerResult.message);
                     }
                 }
             } catch (error) {
@@ -1129,7 +1133,6 @@
             document.getElementById('service-submit-btn').textContent = 'Thêm Dịch Vụ';
             document.getElementById('service-form').reset();
 
-            // Tạo mã dịch vụ tự động
             const serviceId = 'SV' + Math.random().toString(36).substr(2, 8).toUpperCase();
             document.getElementById('service-id').value = serviceId;
             document.getElementById('service-modal').style.display = 'block';
@@ -1170,7 +1173,6 @@
                 if (result.success) {
                     alert('Xóa dịch vụ thành công!');
                     loadServices();
-                    loadStats();
                 } else {
                     alert('Lỗi: ' + result.message);
                 }
@@ -1188,7 +1190,6 @@
 
             try {
                 if (editingService) {
-                    // Cập nhật dịch vụ
                     const response = await fetch(`${API_BASE_URL}/services/${data.servicesId}`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -1200,12 +1201,10 @@
                         alert('Cập nhật dịch vụ thành công!');
                         document.getElementById('service-modal').style.display = 'none';
                         loadServices();
-                        loadStats();
                     } else {
                         alert('Lỗi: ' + result.message);
                     }
                 } else {
-                    // Thêm dịch vụ mới
                     const response = await fetch(`${API_BASE_URL}/services/submit`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1217,7 +1216,6 @@
                         alert('Thêm dịch vụ thành công!');
                         document.getElementById('service-modal').style.display = 'none';
                         loadServices();
-                        loadStats();
                     } else {
                         alert('Lỗi: ' + result.message);
                     }
@@ -1349,7 +1347,6 @@
         }
 
         async function loadReports() {
-            // Copy từ code cũ - giữ nguyên logic
             const month = document.getElementById('report-month').value;
             const year = document.getElementById('report-year').value;
 
